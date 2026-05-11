@@ -1,0 +1,12 @@
+# Cloudflare Pages: bind secrets in the dashboard (Production / Preview), not in git.
+# Local dev: wrangler pages dev dist --ip 127.0.0.1 --port 8788
+# Then run Vite with VITE_DEV_CONTACT_API_PROXY=http://127.0.0.1:8788 (see .env.example).
+
+name = "cyber-portfolio"
+compatibility_date = "2025-05-01"
+pages_build_output_dir = "dist"
+
+# Optional: create a KV namespace in the dashboard, then bind it here and in Pages → Settings → Functions → KV.
+# [[kv_namespaces]]
+# binding = "CONTACT_RATE_LIMIT"
+# id = "your_kv_namespace_id"

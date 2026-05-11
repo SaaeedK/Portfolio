@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Terminal, Download, Menu, X } from 'lucide-react';
+import { Terminal, ExternalLink, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
-import { site, externalHref } from '@/data/site';
+import { site, getResumeHref } from '@/data/site';
 
 const navItems = [
   { name: 'DASHBOARD', path: '/' },
@@ -14,7 +14,7 @@ const navItems = [
 
 export const TopNav = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const resumeHref = externalHref(site.resumeUrl, '');
+  const resumeHref = getResumeHref();
 
   return (
     <header className="fixed top-0 w-full z-50 border-b border-primary-fixed/20 bg-background/70 backdrop-blur-xl shadow-[0_0_15px_rgba(0,251,251,0.1)]">
@@ -47,20 +47,16 @@ export const TopNav = () => {
         </div>
 
         <div className="flex items-center gap-4">
-          {resumeHref ? (
-            <a href={resumeHref} className="terminal-button hidden sm:inline-flex items-center gap-2" download>
-              <Download className="h-4 w-4 shrink-0" aria-hidden />
-              Resume
-            </a>
-          ) : (
-            <span
-              className="terminal-button hidden sm:inline-flex items-center gap-2 opacity-50 cursor-not-allowed"
-              title="Set VITE_RESUME_URL in .env.local"
-            >
-              <Download className="h-4 w-4 shrink-0" aria-hidden />
-              Resume
-            </span>
-          )}
+          <a
+            href={resumeHref}
+            className="terminal-button hidden sm:inline-flex items-center gap-2"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Opens résumé PDF in a new tab"
+          >
+            <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
+            Résumé
+          </a>
           <button
             type="button"
             className="md:hidden text-primary-fixed p-2 rounded hover:bg-primary-fixed/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-fixed"

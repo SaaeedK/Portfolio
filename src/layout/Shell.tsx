@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Download } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { motion } from 'motion/react';
 import { TopNav } from './TopNav';
 import { SideNav } from './SideNav';
-import { site, externalHref } from '@/data/site';
+import { site, externalHref, getResumeHref } from '@/data/site';
 
 export const Shell = ({ children }: { children: ReactNode }) => {
-  const resumeHref = externalHref(site.resumeUrl, '');
+  const resumeHref = getResumeHref();
   const github = externalHref(site.githubUrl, '');
   const year = new Date().getFullYear();
 
@@ -67,20 +67,16 @@ export const Shell = ({ children }: { children: ReactNode }) => {
               Site terms (CC BY 4.0)
             </a>
           </div>
-          {resumeHref ? (
-            <a href={resumeHref} className="terminal-button inline-flex items-center gap-2" download>
-              <Download className="h-4 w-4 shrink-0" aria-hidden />
-              Download resume
-            </a>
-          ) : (
-            <span
-              className="terminal-button inline-flex items-center gap-2 opacity-50 cursor-not-allowed"
-              title="Set VITE_RESUME_URL in .env.local to enable"
-            >
-              <Download className="h-4 w-4 shrink-0" aria-hidden />
-              Resume (configure URL)
-            </span>
-          )}
+          <a
+            href={resumeHref}
+            className="terminal-button inline-flex items-center gap-2"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Opens résumé PDF in a new tab"
+          >
+            <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
+            Open résumé
+          </a>
         </div>
       </footer>
     </div>

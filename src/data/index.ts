@@ -1,4 +1,4 @@
 export { labs, commits, projects } from './portfolio';
 export * from './labDemo';
 export * from './logFeed';
-export { site, externalHref } from './site';
+export { site, externalHref, getResumeHref } from './site';

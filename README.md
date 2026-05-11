@@ -1,6 +1,6 @@
 # Cyber portfolio (Vite + React)
 
-Terminal-inspired portfolio UI: dashboard, Splunk-style **static demo** lab, decorative log stream, and a contact form that opens the visitor’s mail client (`mailto:`) when `VITE_EMAIL` is set.
+Terminal-inspired portfolio UI: dashboard, Splunk-style **static demo** lab, decorative log stream, and a **Contact** page with profiles plus a résumé link that **opens the PDF in a new tab** (no public email in env — contact details live in your PDF).
 
 ## Prerequisites
 
@@ -14,7 +14,7 @@ Terminal-inspired portfolio UI: dashboard, Splunk-style **static demo** lab, dec
    npm install
    ```
 
-2. Copy [`.env.example`](.env.example) to `.env.local` and set any links you want (GitHub, LinkedIn, email, résumé URL). All variables are optional; unset URLs show helpful placeholders in the UI.
+2. Copy [`.env.example`](.env.example) to `.env.local` and set profile links or a **`VITE_RESUME_URL`** override if needed. Add **`public/resume.pdf`** so the default **`/resume.pdf`** link works after build (see **Résumé on this site**). All `VITE_*` entries are optional.
 
 3. Run locally:
 
@@ -50,6 +50,11 @@ Terminal-inspired portfolio UI: dashboard, Splunk-style **static demo** lab, dec
 
 Imports use the `@/*` alias (resolved to [`src/`](src/)) via [`vite.config.ts`](vite.config.ts) and [`tsconfig.json`](tsconfig.json).
 
+## Résumé on this site
+
+- Default résumé URL is **`/resume.pdf`** (links use **`target="_blank"`** so the PDF opens in a new tab). Put your file at **`public/resume.pdf`** in the repo; Vite copies it into `dist/resume.pdf` on build.
+- To use another path or an external PDF instead, set **`VITE_RESUME_URL`** to e.g. `/cv.pdf` or `https://...`.
+
 ## Editing content
 
 - **Home labs / timeline / projects:** [`src/data/portfolio.ts`](src/data/portfolio.ts)
@@ -77,7 +82,7 @@ Repo includes [`.node-version`](.node-version) (Node 20) for consistent CI/Pages
 
 In the Pages project → **Settings** → **Environment variables**, add the same keys as [`.env.example`](.env.example) for **Production** (and **Preview** if you want PR previews):
 
-- `VITE_GITHUB_URL`, `VITE_LINKEDIN_URL`, `VITE_EMAIL`, `VITE_RESUME_URL`
+- `VITE_GITHUB_URL`, `VITE_LINKEDIN_URL`, `VITE_RESUME_URL` (optional override for résumé URL or path)
 - Optional Firebase: `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID`
 
 Trigger **Retry deployment** after changing variables (Vite inlines `VITE_*` at build time).

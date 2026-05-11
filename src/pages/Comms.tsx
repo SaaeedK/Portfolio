@@ -1,47 +1,107 @@
-import { useState, type FormEvent } from 'react';
-import { Send, Key, Github, Linkedin, ExternalLink } from 'lucide-react';
-import { site, externalHref } from '@/data/site';
+import { useCallback, useState } from 'react';
+import { FileText, Github, Linkedin, ExternalLink, Send, Loader2, CheckCircle2 } from 'lucide-react';
+import { Turnstile } from '@marsidev/react-turnstile';
+import { site, externalHref, getResumeHref } from '@/data/site';
 
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const CONTACT_API = (import.meta.env.VITE_CONTACT_API_URL || '/api/contact').replace(/\/$/, '');
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim() || '';
+
+function errorMessage(code: string): string {
+  switch (code) {
+    case 'rate_limited':
+      return 'Too many messages from this network. Please try again later.';
+    case 'geo_blocked':
+      return 'Contact is only accepted from allowed regions.';
+    case 'geo_unavailable':
+      return 'Your request could not be verified for location. Try again from a normal browser connection.';
+    case 'disposable_email':
+      return 'Disposable or temporary email addresses are not accepted. Use a stable inbox (e.g. Gmail, Outlook, school/work).';
+    case 'email_domain_unreachable':
+      return 'That email domain cannot receive mail (no valid mail servers found). Check the address.';
+    case 'unsupported_media_type':
+      return 'Invalid request format.';
+    case 'turnstile_required':
+    case 'turnstile_failed':
+      return 'Human verification failed. Refresh the page and try again.';
+    case 'turnstile_misconfigured':
+      return 'Contact form is temporarily misconfigured.';
+    case 'invalid_email':
+      return 'Please enter a valid email address.';
+    case 'missing_fields':
+      return 'Please fill in name, email, and message.';
+    case 'field_too_long':
+      return 'One of the fields is too long. Shorten and try again.';
+    case 'payload_too_large':
+      return 'Message is too large.';
+    case 'contact_not_configured':
+      return 'The contact service is not configured yet.';
+    case 'origin_not_allowed':
+      return 'Request was blocked (origin).';
+    case 'send_failed':
+      return 'Could not send right now. Please try again or use your résumé email.';
+    default:
+      return 'Something went wrong. Please try again.';
+  }
+}
 
 export const Comms = () => {
+  const github = externalHref(site.githubUrl, '#');
+  const linkedin = externalHref(site.linkedinUrl, '#');
+  const resumeHref = getResumeHref();
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
-  const [errors, setErrors] = useState<{ name?: string; email?: string; message?: string }>({});
-  const [formError, setFormError] = useState('');
-  const [submitted, setSubmitted] = useState(false);
+  const [honeypot, setHoneypot] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [errorText, setErrorText] = useState('');
 
-  const github = externalHref(site.githubUrl, '#');
-  const linkedin = externalHref(site.linkedinUrl, '#');
-  const configuredEmail = site.email?.trim();
+  const resetTurnstile = useCallback(() => {
+    setTurnstileToken(null);
+  }, []);
 
-  const validate = () => {
-    const next: typeof errors = {};
-    if (!name.trim()) next.name = 'Name is required.';
-    if (!email.trim()) next.email = 'Email is required.';
-    else if (!emailPattern.test(email.trim())) next.email = 'Enter a valid email address.';
-    if (!message.trim()) next.message = 'Message is required.';
-    else if (message.trim().length < 10) next.message = 'Please write at least a few sentences (10+ characters).';
-    setErrors(next);
-    return Object.keys(next).length === 0;
-  };
-
-  const handleSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(false);
-    setFormError('');
-    if (!validate()) return;
-
-    if (!configuredEmail) {
-      setFormError('Set VITE_EMAIL in .env.local (e.g. you@domain.com) to enable opening a mail draft from this form.');
+    if (honeypot.trim() !== '') return;
+    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+      setStatus('error');
+      setErrorText('Please complete the verification widget.');
       return;
     }
-
-    const subject = encodeURIComponent(`Portfolio contact from ${name.trim()}`);
-    const body = encodeURIComponent(`${message.trim()}\n\n— ${name.trim()} <${email.trim()}>`);
-    window.location.href = `mailto:${configuredEmail}?subject=${subject}&body=${body}`;
-    setSubmitted(true);
+    setStatus('sending');
+    setErrorText('');
+    try {
+      const res = await fetch(CONTACT_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          message,
+          website: honeypot,
+          'cf-turnstile-response': turnstileToken ?? '',
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setStatus('error');
+        setErrorText(errorMessage(data.error ?? 'unknown'));
+        resetTurnstile();
+        return;
+      }
+      setStatus('success');
+      setName('');
+      setEmail('');
+      setMessage('');
+      resetTurnstile();
+    } catch {
+      setStatus('error');
+      setErrorText(
+        'Network error. For local development, run `npm run pages:dev` in another terminal (see .env.example).',
+      );
+      resetTurnstile();
+    }
   };
 
   return (
@@ -50,134 +110,193 @@ export const Comms = () => {
         <h1 className="text-4xl md:text-6xl font-extrabold text-primary-fixed tracking-tighter mb-4 drop-shadow-[0_0_10px_rgba(0,251,251,0.3)]">
           CONTACT
         </h1>
-        <div className="flex items-center gap-3 font-mono text-xs text-secondary-fixed">
-          <div className="w-2 h-2 rounded-full bg-secondary-fixed shadow-[0_0_8px_rgba(76,227,70,0.8)]" aria-hidden />
-          <span>Use the form to open your mail client, or use the links on the right.</span>
-        </div>
+        <p className="font-mono text-sm text-on-surface-variant max-w-2xl leading-relaxed">
+          Send a secure message (validated server-side, optional bot check, rate limits) or use the profiles and résumé
+          below. Email delivery uses a{' '}
+          <a
+            href="https://developers.cloudflare.com/pages/functions/"
+            className="text-primary-fixed hover:underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Cloudflare Pages Function
+          </a>{' '}
+          and{' '}
+          <a href="https://resend.com/docs" className="text-primary-fixed hover:underline" target="_blank" rel="noopener noreferrer">
+            Resend
+          </a>
+          — API keys stay on the server, not in the browser bundle.
+        </p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <section className="lg:col-span-8" aria-labelledby="contact-form-heading">
-          <div className="bento-card p-6 md:p-10 relative overflow-hidden group">
-            <div className="flex justify-between items-start mb-10 border-b border-primary-fixed/20 pb-6">
-              <h2 id="contact-form-heading" className="font-mono text-base font-bold text-on-surface uppercase tracking-widest flex items-center gap-4">
-                Message <span className="text-primary-fixed opacity-50">via mailto</span>
+        <section className="lg:col-span-8 flex flex-col gap-8" aria-labelledby="message-heading">
+          <div className="bento-card p-6 md:p-10 relative overflow-hidden">
+            <div className="flex justify-between items-start mb-8 border-b border-primary-fixed/20 pb-6">
+              <h2 id="message-heading" className="font-mono text-base font-bold text-on-surface uppercase tracking-widest flex items-center gap-4">
+                Message <span className="text-primary-fixed opacity-50">TLS</span>
               </h2>
-              <Send size={20} className="text-primary-fixed/50" aria-hidden />
+              <Send size={22} className="text-primary-fixed/50" aria-hidden />
             </div>
 
-            <form className="space-y-10" onSubmit={handleSubmit} noValidate>
-              <div className="space-y-4">
-                <label htmlFor="identity" className="font-mono text-xs text-primary-fixed font-bold uppercase tracking-widest block">
-                  Name
-                </label>
-                <div className="relative flex items-center bg-surface-container/50 border border-outline-variant/30 focus-within:border-primary-fixed transition-all group/input">
-                  <span className="pl-4 pr-3 font-mono text-primary-fixed text-sm opacity-50" aria-hidden>
-                    &gt;
-                  </span>
-                  <input
-                    id="identity"
-                    name="name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Your name"
-                    className="w-full bg-transparent border-none py-4 px-0 focus:ring-0 font-mono text-sm text-on-surface placeholder:text-white/20"
-                    autoComplete="name"
-                    aria-invalid={!!errors.name}
-                    aria-describedby={errors.name ? 'identity-error' : undefined}
-                  />
+            {status === 'success' ? (
+              <div className="flex flex-col gap-4 text-on-surface-variant text-sm" role="status">
+                <div className="flex items-center gap-3 text-primary-fixed">
+                  <CheckCircle2 className="shrink-0" size={22} aria-hidden />
+                  <span className="font-mono">Message sent. Thanks — I will get back to you when I can.</span>
                 </div>
-                {errors.name ? (
-                  <p id="identity-error" className="text-error-fixed text-xs font-mono">
-                    {errors.name}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="space-y-4">
-                <label htmlFor="frequency" className="font-mono text-xs text-primary-fixed font-bold uppercase tracking-widest block">
-                  Email
-                </label>
-                <div className="relative flex items-center bg-surface-container/50 border border-outline-variant/30 focus-within:border-primary-fixed transition-all group/input">
-                  <span className="pl-4 pr-3 font-mono text-primary-fixed text-sm opacity-50" aria-hidden>
-                    &gt;
-                  </span>
-                  <input
-                    id="frequency"
-                    name="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="w-full bg-transparent border-none py-4 px-0 focus:ring-0 font-mono text-sm text-on-surface placeholder:text-white/20"
-                    autoComplete="email"
-                    aria-invalid={!!errors.email}
-                    aria-describedby={errors.email ? 'frequency-error' : undefined}
-                  />
-                </div>
-                {errors.email ? (
-                  <p id="frequency-error" className="text-error-fixed text-xs font-mono">
-                    {errors.email}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="space-y-4">
-                <label htmlFor="payload" className="font-mono text-xs text-primary-fixed font-bold uppercase tracking-widest block">
-                  Message
-                </label>
-                <div className="relative flex items-start bg-surface-container/50 border border-outline-variant/30 focus-within:border-primary-fixed transition-all group/input">
-                  <span className="pl-4 pr-3 pt-4 font-mono text-primary-fixed text-sm opacity-50" aria-hidden>
-                    &gt;
-                  </span>
-                  <textarea
-                    id="payload"
-                    name="message"
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="What would you like to discuss?"
-                    rows={6}
-                    className="w-full bg-transparent border-none py-4 px-0 focus:ring-0 font-mono text-sm text-on-surface placeholder:text-white/20 resize-none min-h-44"
-                    aria-invalid={!!errors.message}
-                    aria-describedby={errors.message ? 'payload-error' : undefined}
-                  />
-                </div>
-                {errors.message ? (
-                  <p id="payload-error" className="text-error-fixed text-xs font-mono">
-                    {errors.message}
-                  </p>
-                ) : null}
-              </div>
-
-              {formError ? (
-                <p className="font-mono text-xs text-error-fixed" role="alert">
-                  {formError}
-                </p>
-              ) : null}
-
-              {submitted ? (
-                <p className="font-mono text-xs text-secondary-fixed" role="status">
-                  If your mail client opened, send the message from there. Thanks.
-                </p>
-              ) : null}
-
-              <div className="pt-6 flex justify-end">
-                <button
-                  type="submit"
-                  className="group relative px-10 py-4 bg-transparent border border-primary-fixed text-primary-fixed font-mono text-sm font-bold tracking-widest uppercase hover:bg-primary-fixed hover:text-background transition-all duration-300 shadow-[0_0_15px_rgba(0,251,251,0.1)] hover:shadow-[0_0_30px_rgba(0,251,251,0.4)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-fixed"
-                >
-                  <span className="flex items-center gap-3">
-                    Open mail client
-                    <span className="w-2 h-4 bg-current blinking-cursor" aria-hidden />
-                  </span>
+                <button type="button" className="terminal-button self-start text-xs mt-2" onClick={() => setStatus('idle')}>
+                  Send another
                 </button>
               </div>
-            </form>
+            ) : (
+              <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="contact-name" className="font-mono text-[10px] uppercase tracking-widest text-on-surface-variant">
+                      Name
+                    </label>
+                    <input
+                      id="contact-name"
+                      name="name"
+                      type="text"
+                      autoComplete="name"
+                      maxLength={120}
+                      required
+                      value={name}
+                      onChange={(ev) => setName(ev.target.value)}
+                      className="rounded border border-outline-variant/40 bg-surface-container/40 px-3 py-2 font-mono text-sm text-on-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-fixed"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="contact-email" className="font-mono text-[10px] uppercase tracking-widest text-on-surface-variant">
+                      Email
+                    </label>
+                    <input
+                      id="contact-email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      maxLength={254}
+                      required
+                      value={email}
+                      onChange={(ev) => setEmail(ev.target.value)}
+                      className="rounded border border-outline-variant/40 bg-surface-container/40 px-3 py-2 font-mono text-sm text-on-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-fixed"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="contact-message" className="font-mono text-[10px] uppercase tracking-widest text-on-surface-variant">
+                    Message
+                  </label>
+                  <textarea
+                    id="contact-message"
+                    name="message"
+                    required
+                    rows={6}
+                    maxLength={8000}
+                    value={message}
+                    onChange={(ev) => setMessage(ev.target.value)}
+                    className="rounded border border-outline-variant/40 bg-surface-container/40 px-3 py-2 font-mono text-sm text-on-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-fixed resize-y min-h-[140px]"
+                  />
+                </div>
+
+                <div className="absolute left-[-9999px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
+                  <label htmlFor="contact-website">Company website</label>
+                  <input
+                    id="contact-website"
+                    name="website"
+                    type="text"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={honeypot}
+                    onChange={(ev) => setHoneypot(ev.target.value)}
+                  />
+                </div>
+
+                {TURNSTILE_SITE_KEY ? (
+                  <div className="min-h-[65px]">
+                    <Turnstile
+                      siteKey={TURNSTILE_SITE_KEY}
+                      options={{ theme: 'dark' }}
+                      onSuccess={setTurnstileToken}
+                      onExpire={() => setTurnstileToken(null)}
+                      onError={() => setTurnstileToken(null)}
+                    />
+                  </div>
+                ) : null}
+
+                {status === 'error' && errorText ? (
+                  <p className="text-sm font-mono text-red-400/90" role="alert">
+                    {errorText}
+                  </p>
+                ) : null}
+
+                <button
+                  type="submit"
+                  disabled={status === 'sending'}
+                  className="terminal-button inline-flex items-center justify-center gap-2 self-start disabled:opacity-50"
+                >
+                  {status === 'sending' ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden />
+                      Sending…
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 shrink-0" aria-hidden />
+                      Send message
+                    </>
+                  )}
+                </button>
+
+                <p className="text-[10px] font-mono text-on-surface-variant opacity-80 leading-relaxed">
+                  No SQL or database in this path: the function validates JSON and calls Resend over HTTPS. Configure
+                  server secrets in Cloudflare Pages (not <span className="text-primary-fixed">VITE_*</span>). See{' '}
+                  <span className="text-on-surface">.env.example</span>.
+                </p>
+              </form>
+            )}
+          </div>
+
+          <div className="bento-card p-6 md:p-10 relative overflow-hidden" aria-labelledby="resume-heading">
+            <div className="flex justify-between items-start mb-8 border-b border-primary-fixed/20 pb-6">
+              <h2 id="resume-heading" className="font-mono text-base font-bold text-on-surface uppercase tracking-widest flex items-center gap-4">
+                Résumé <span className="text-primary-fixed opacity-50">PDF</span>
+              </h2>
+              <FileText size={22} className="text-primary-fixed/50" aria-hidden />
+            </div>
+
+            <p className="text-on-surface-variant text-sm mb-8 leading-relaxed">
+              {resumeHref === '/resume.pdf' ? (
+                <>
+                  Served at <span className="font-mono text-primary-fixed">/resume.pdf</span> from{' '}
+                  <span className="font-mono text-on-surface">public/resume.pdf</span> (copied into <span className="font-mono text-on-surface">dist</span>{' '}
+                  on build and deployed with the site).
+                </>
+              ) : (
+                <>
+                  Résumé URL from <span className="font-mono text-primary-fixed">VITE_RESUME_URL</span>:{' '}
+                  <span className="font-mono text-primary-fixed">{resumeHref}</span>
+                </>
+              )}
+            </p>
+
+            <a
+              href={resumeHref}
+              className="terminal-button inline-flex items-center gap-3 text-sm"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Opens résumé PDF in a new tab"
+            >
+              <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
+              Open résumé
+            </a>
           </div>
         </section>
 
-        <section className="lg:col-span-4 flex flex-col gap-8" aria-label="Profiles and encryption">
+        <section className="lg:col-span-4 flex flex-col gap-8" aria-label="Profiles">
           <div className="bento-card p-6">
             <h3 className="font-mono text-xs font-bold text-on-surface-variant uppercase tracking-[0.2em] mb-8 border-b border-white/5 pb-4">Profiles</h3>
             <div className="flex flex-col gap-4">
@@ -215,35 +334,8 @@ export const Comms = () => {
             </div>
             <p className="mt-4 text-[10px] font-mono text-on-surface-variant opacity-70">
               Set <span className="text-primary-fixed">VITE_GITHUB_URL</span> and <span className="text-primary-fixed">VITE_LINKEDIN_URL</span> in{' '}
-              <span className="text-on-surface">.env.local</span>.
+              <span className="text-on-surface">.env.local</span> or Cloudflare Pages env.
             </p>
-          </div>
-
-          <div className="bento-card p-6 flex-1 flex flex-col relative group overflow-hidden">
-            <div className="absolute top-2 right-4 flex gap-1.5 h-6 items-end" aria-hidden>
-              <div className="w-1.5 h-2 bg-secondary-fixed opacity-30" />
-              <div className="w-1.5 h-6 bg-secondary-fixed opacity-60" />
-              <div className="w-1.5 h-4 bg-secondary-fixed opacity-90" />
-            </div>
-
-            <h3 className="font-mono text-xs font-bold text-secondary-fixed uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
-              <Key size={16} aria-hidden /> Encrypted email
-            </h3>
-
-            <p className="text-[11px] text-on-surface-variant leading-relaxed mb-4">
-              Prefer OpenPGP? Publish your real public key block on your site or a keyserver and paste it here, or link to a{' '}
-              <code className="text-primary-fixed/90">keys.openpgp.org</code> profile. The previous placeholder block was removed so visitors are not
-              misled.
-            </p>
-
-            <div className="bg-[#050a0a] border border-outline-variant/20 p-5 rounded font-mono text-[10px] leading-relaxed text-on-surface/60 grow">
-              <p>Add your ASCII-armored key or a short note on how you prefer to be contacted for sensitive topics.</p>
-            </div>
-
-            <div className="mt-6 font-mono text-[10px] tracking-widest text-on-surface-variant opacity-80">
-              <span className="text-on-surface/30">FINGERPRINT:</span>{' '}
-              <span className="text-secondary-fixed">Configure when you add a real key</span>
-            </div>
           </div>
         </section>
       </div>
