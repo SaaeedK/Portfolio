@@ -1,0 +1,9 @@
+rules_version = '2';
+// Deny-by-default. Tighten per collection when you add features (e.g. contact writes with validation).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
