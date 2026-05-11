@@ -1,6 +1,6 @@
 {
-  "name": "Alex Architect - Cyber Portfolio",
-  "description": "A high-fidelity, technical cybersecurity portfolio with terminal-inspired design, featuring labs, projects, and secure comms.",
+  "name": "Alex Architect — Cyber portfolio",
+  "description": "Terminal-inspired security portfolio: static demo lab UI, sample logs, and mailto contact. Vite + React + Tailwind.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }
