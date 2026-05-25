@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { ExternalLink } from 'lucide-react';
 import { motion } from 'motion/react';
 import { TopNav } from './TopNav';
 import { SideNav } from './SideNav';
@@ -61,22 +60,21 @@ export const Shell = ({ children }: { children: ReactNode }) => {
               Contact
             </Link>
             <a
+              href={resumeHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-primary-fixed transition-colors"
+              title="Opens résumé PDF in a new tab"
+            >
+              Résumé
+            </a>
+            <a
               href="https://creativecommons.org/licenses/by/4.0/"
               className="hover:text-primary-fixed transition-colors"
             >
               Site terms (CC BY 4.0)
             </a>
           </div>
-          <a
-            href={resumeHref}
-            className="terminal-button inline-flex items-center gap-2"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Opens résumé PDF in a new tab"
-          >
-            <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
-            Open résumé
-          </a>
         </div>
       </footer>
     </div>

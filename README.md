@@ -52,8 +52,10 @@ Imports use the `@/*` alias (resolved to [`src/`](src/)) via [`vite.config.ts`](
 
 ## Résumé on this site
 
-- Default résumé URL is **`/resume.pdf`** (links use **`target="_blank"`** so the PDF opens in a new tab). Put your file at **`public/resume.pdf`** in the repo; Vite copies it into `dist/resume.pdf` on build.
-- To use another path or an external PDF instead, set **`VITE_RESUME_URL`** to e.g. `/cv.pdf` or `https://...`.
+- Default résumé URL is **`/resume.pdf`** (header **Résumé** button; footer has a plain text link). Links use **`target="_blank"`**.
+- **`public/resume.pdf` must be a real binary PDF** (starts with `%PDF-`), not a text file — otherwise browsers show “can’t open this file.” Use a **redacted** export: no email, phone, or street address in the file; reachability via **`/comms`** and LinkedIn.
+- Regenerate the placeholder with `node scripts/generate-resume-pdf.mjs`, or replace the file with your own redacted export before production deploy.
+- To use another path or an external PDF, set **`VITE_RESUME_URL`** to e.g. `/cv.pdf` or `https://...`.
 
 ## Editing content
 
@@ -89,11 +91,22 @@ This repo sets `pages_build_output_dir` in [`wrangler.toml`](wrangler.toml), so 
    - `CONTACT_TO_EMAIL` (your inbox — keep out of git)
 3. Commit and push (or **Retry deployment**) so build + Functions pick up changes.
 
-Optional Firebase `VITE_FIREBASE_*` can also go in `[vars]` if you use Analytics. KV: uncomment `[[kv_namespaces]]` in `wrangler.toml` after creating a namespace.
+Optional Firebase `VITE_FIREBASE_*` can also go in `[vars]` if you use Analytics.
+
+**Contact API rate limits (KV, recommended)**
+
+After `wrangler login` (or with `CLOUDFLARE_API_TOKEN` set):
+
+```bash
+npm run kv:enable
+```
+
+This creates the `CONTACT_RATE_LIMIT` namespace and writes its id into `wrangler.toml`. Commit and redeploy. Manual alternative: `npm run kv:create`, then uncomment `[[kv_namespaces]]` in `wrangler.toml` and paste the id.
 
 **3. Custom domain (optional)**
 
-Pages project → **Custom domains** → add your domain and apply the DNS records Cloudflare shows (often a CNAME to your `*.pages.dev` host). Use **Full (strict)** SSL once DNS propagates.
+1. Pages project → **Custom domains** → add your domain and apply the DNS records Cloudflare shows (often a CNAME to your `*.pages.dev` host). Use **Full (strict)** SSL once DNS propagates.
+2. Append the origin to `ALLOWED_ORIGINS` in [`wrangler.toml`](wrangler.toml) (comma-separated, **no trailing slashes**), e.g. `https://portfolio-6v0.pages.dev,https://www.yourdomain.com`, then commit and redeploy so the contact form accepts POSTs from the new host.
 
 ### Firebase (optional services alongside Pages)
 

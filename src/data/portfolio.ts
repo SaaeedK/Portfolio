@@ -89,4 +89,13 @@ export const projects: Project[] = [
     icon: 'language',
     status: 'v2.1.0',
   },
+  {
+    id: '4',
+    title: 'This portfolio',
+    description: 'Terminal-inspired security portfolio on Cloudflare Pages with contact API.',
+    tech: 'REACT',
+    icon: 'language',
+    status: 'LIVE',
+    repoUrl: 'https://github.com/SaaeedK/Portfolio',
+  },
 ];

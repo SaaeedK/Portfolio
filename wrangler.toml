@@ -13,20 +13,21 @@ pages_build_output_dir = "dist"
 # Contact API (server) — CONTACT_TO_EMAIL is a dashboard Secret, not stored in git
 CONTACT_REQUIRE_TURNSTILE = "true"
 CONTACT_ALLOWED_COUNTRIES = "US"
+# Comma-separated origins (no trailing slashes). Add your custom domain when attached, e.g. ,https://www.yourdomain.com
 ALLOWED_ORIGINS = "https://portfolio-6v0.pages.dev"
 # Optional verified Resend sender (uncomment and set if needed)
 # CONTACT_FROM = "Portfolio <noreply@yourdomain.com>"
 
 # Client (public; embedded in the JS bundle)
 VITE_TURNSTILE_SITE_KEY = "0x4AAAAAADNDV1pHsmwRTk_a"
-# VITE_GITHUB_URL = "https://github.com/SaaeedK"
-# VITE_LINKEDIN_URL = "https://linkedin.com/in/saaeed-khan"
+VITE_GITHUB_URL = "https://github.com/SaaeedK"
+VITE_LINKEDIN_URL = "https://linkedin.com/in/saaeed-khan"
 
 # Preview: looser geo (wrangler pages dev has no cf.country)
 [env.preview.vars]
 CONTACT_ALLOWED_COUNTRIES = ""
 
-# Optional KV: create namespace in dashboard → Storage & Databases → KV, paste id below, uncomment.
-# [[kv_namespaces]]
-# binding = "CONTACT_RATE_LIMIT"
-# id = "YOUR_KV_NAMESPACE_ID"
+# KV rate limits for POST /api/contact (3/min, 6/hr per IP)
+[[kv_namespaces]]
+binding = "CONTACT_RATE_LIMIT"
+id = "3c3b7590709a4ecc894517df5befba68"

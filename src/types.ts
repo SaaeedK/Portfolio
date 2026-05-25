@@ -27,4 +27,6 @@ export interface Project {
   tech: string;
   icon: string;
   status: string;
+  /** When set, project card links to the repository. */
+  repoUrl?: string;
 }

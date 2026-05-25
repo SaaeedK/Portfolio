@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
-import { FileText, Github, Linkedin, ExternalLink, Send, Loader2, CheckCircle2 } from 'lucide-react';
+import { Github, Linkedin, ExternalLink, Send, Loader2, CheckCircle2 } from 'lucide-react';
 import { Turnstile } from '@marsidev/react-turnstile';
-import { site, externalHref, getResumeHref } from '@/data/site';
+import { site, externalHref } from '@/data/site';
 
 const CONTACT_API = (import.meta.env.VITE_CONTACT_API_URL || '/api/contact').replace(/\/$/, '');
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim() || '';
@@ -38,7 +38,7 @@ function errorMessage(code: string): string {
     case 'origin_not_allowed':
       return 'Request was blocked (origin).';
     case 'send_failed':
-      return 'Could not send right now. Please try again or use your résumé email.';
+      return 'Could not send right now. Please try again via this form.';
     default:
       return 'Something went wrong. Please try again.';
   }
@@ -47,8 +47,7 @@ function errorMessage(code: string): string {
 export const Comms = () => {
   const github = externalHref(site.githubUrl, '#');
   const linkedin = externalHref(site.linkedinUrl, '#');
-  const resumeHref = getResumeHref();
-
+  const profilesConfigured = github !== '#' && linkedin !== '#';
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
@@ -111,8 +110,8 @@ export const Comms = () => {
           CONTACT
         </h1>
         <p className="font-mono text-sm text-on-surface-variant max-w-2xl leading-relaxed">
-          Send a secure message (validated server-side, optional bot check, rate limits) or use the profiles and résumé
-          below. Email delivery uses a{' '}
+          Send a secure message (validated server-side, optional bot check, rate limits) or use the profiles below.
+          Résumé is in the header. Email delivery uses a{' '}
           <a
             href="https://developers.cloudflare.com/pages/functions/"
             className="text-primary-fixed hover:underline"
@@ -259,41 +258,6 @@ export const Comms = () => {
               </form>
             )}
           </div>
-
-          <div className="bento-card p-6 md:p-10 relative overflow-hidden" aria-labelledby="resume-heading">
-            <div className="flex justify-between items-start mb-8 border-b border-primary-fixed/20 pb-6">
-              <h2 id="resume-heading" className="font-mono text-base font-bold text-on-surface uppercase tracking-widest flex items-center gap-4">
-                Résumé <span className="text-primary-fixed opacity-50">PDF</span>
-              </h2>
-              <FileText size={22} className="text-primary-fixed/50" aria-hidden />
-            </div>
-
-            <p className="text-on-surface-variant text-sm mb-8 leading-relaxed">
-              {resumeHref === '/resume.pdf' ? (
-                <>
-                  Served at <span className="font-mono text-primary-fixed">/resume.pdf</span> from{' '}
-                  <span className="font-mono text-on-surface">public/resume.pdf</span> (copied into <span className="font-mono text-on-surface">dist</span>{' '}
-                  on build and deployed with the site).
-                </>
-              ) : (
-                <>
-                  Résumé URL from <span className="font-mono text-primary-fixed">VITE_RESUME_URL</span>:{' '}
-                  <span className="font-mono text-primary-fixed">{resumeHref}</span>
-                </>
-              )}
-            </p>
-
-            <a
-              href={resumeHref}
-              className="terminal-button inline-flex items-center gap-3 text-sm"
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Opens résumé PDF in a new tab"
-            >
-              <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
-              Open résumé
-            </a>
-          </div>
         </section>
 
         <section className="lg:col-span-4 flex flex-col gap-8" aria-label="Profiles">
@@ -332,10 +296,12 @@ export const Comms = () => {
                 )
               )}
             </div>
-            <p className="mt-4 text-[10px] font-mono text-on-surface-variant opacity-70">
-              Set <span className="text-primary-fixed">VITE_GITHUB_URL</span> and <span className="text-primary-fixed">VITE_LINKEDIN_URL</span> in{' '}
-              <span className="text-on-surface">.env.local</span> or Cloudflare Pages env.
-            </p>
+            {!profilesConfigured ? (
+              <p className="mt-4 text-[10px] font-mono text-on-surface-variant opacity-70">
+                Set <span className="text-primary-fixed">VITE_GITHUB_URL</span> and <span className="text-primary-fixed">VITE_LINKEDIN_URL</span> in{' '}
+                <span className="text-on-surface">.env.local</span> or Cloudflare Pages env.
+              </p>
+            ) : null}
           </div>
         </section>
       </div>

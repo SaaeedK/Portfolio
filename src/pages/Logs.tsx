@@ -39,7 +39,7 @@ export const Logs = () => {
                     initial={{ opacity: 0, x: -5 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.1 }}
-                    className="flex flex-col sm:flex-row gap-2 sm:gap-6 group/item hover:bg-white/5 p-2 -mx-2 rounded transition-colors"
+                    className="flex flex-col sm:flex-row gap-2 sm:gap-6 p-2 -mx-2 rounded"
                   >
                     <span className="text-on-surface-variant/40 shrink-0 select-none">[{log.timestamp}]</span>
                     <span
@@ -53,7 +53,7 @@ export const Logs = () => {
                     </span>
                     <span
                       className={cn(
-                        'text-on-surface-variant group-hover/item:text-on-surface transition-colors',
+                        'text-on-surface-variant',
                         log.type === 'WARNING' && 'text-error-fixed/80'
                       )}
                     >

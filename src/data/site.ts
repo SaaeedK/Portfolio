@@ -2,8 +2,8 @@
  * Public site copy and optional links (set in `.env.local` with VITE_* vars).
  */
 export const site = {
-  displayName: 'Alex Architect',
-  displayHandle: 'ALEX_ARCHITECT',
+  displayName: 'Saaeed Khan',
+  displayHandle: 'SAAEED_K',
   /** Shown in meta / OG tags */
   tagline: 'Security engineer portfolio — terminal-inspired UI, static demo content.',
   /** Configure via VITE_GITHUB_URL, etc. */

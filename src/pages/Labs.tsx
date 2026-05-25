@@ -1,4 +1,5 @@
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   Terminal,
@@ -12,6 +13,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { copyText } from '@/lib/clipboard';
 import { motion } from 'motion/react';
 import {
   labDemoAggregates,
@@ -23,12 +25,27 @@ import {
 } from '@/data/labDemo';
 
 export const Labs = () => {
+  const navigate = useNavigate();
+  const [copyStatus, setCopyStatus] = useState('');
+
+  const onCopyQuery = async (query: string) => {
+    const ok = await copyText(query);
+    setCopyStatus(ok ? 'Query copied to clipboard.' : 'Could not copy — select and copy manually.');
+    window.setTimeout(() => setCopyStatus(''), 3000);
+  };
+
   return (
     <div className="flex flex-col gap-8">
       <p className="font-mono text-[11px] text-on-surface-variant border border-outline-variant/40 rounded px-3 py-2 bg-surface-variant/20 max-w-3xl">
         This page is a <span className="text-primary-fixed font-bold">static UI mock</span> for a portfolio piece. It does not connect to Splunk or
         any live data source.
       </p>
+
+      {copyStatus ? (
+        <p className="font-mono text-[11px] text-primary-fixed" role="status">
+          {copyStatus}
+        </p>
+      ) : null}
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 w-full border-b border-primary-fixed/20 pb-6">
         <div>
@@ -46,11 +63,18 @@ export const Labs = () => {
         <div className="flex items-center gap-4 w-full md:w-auto">
           <button
             type="button"
-            className="font-mono text-xs text-on-surface-variant hover:text-primary-fixed transition-colors flex items-center gap-2"
+            disabled
+            aria-disabled="true"
+            title="Portfolio demo — not connected to Splunk"
+            className="font-mono text-xs text-on-surface-variant opacity-50 cursor-not-allowed flex items-center gap-2"
           >
             <History size={16} aria-hidden /> Reset view (demo)
           </button>
-          <button type="button" className="terminal-button flex items-center gap-2 flex-1 md:flex-none justify-center">
+          <button
+            type="button"
+            className="terminal-button flex items-center gap-2 flex-1 md:flex-none justify-center"
+            onClick={() => navigate('/')}
+          >
             <ArrowLeft size={16} aria-hidden /> Close scenario
           </button>
         </div>
@@ -87,7 +111,14 @@ export const Labs = () => {
                 <span className="text-on-surface-variant">
                   TIME: <span className="text-on-surface">1.4s</span>
                 </span>
-                <button type="button" className="text-on-surface-variant hover:text-primary-fixed transition-colors" aria-label="Export sample">
+                <button
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  aria-label="Export sample (portfolio demo — disabled)"
+                  title="Portfolio demo"
+                  className="text-on-surface-variant opacity-50 cursor-not-allowed"
+                >
                   <Download size={16} />
                 </button>
               </div>
@@ -104,7 +135,7 @@ export const Labs = () => {
                 </thead>
                 <tbody className="text-on-surface-variant">
                   {labDemoLogRows.map((log, i) => (
-                    <tr key={i} className="border-b border-outline-variant/10 hover:bg-surface-variant/10 transition-colors">
+                    <tr key={i} className="border-b border-outline-variant/10">
                       <td className="py-3 pr-4 text-on-surface/60 whitespace-nowrap">{log.time}</td>
                       <td className="py-3 pr-4">
                         <span
@@ -202,7 +233,10 @@ export const Labs = () => {
 
                 <button
                   type="button"
-                  className="mt-6 w-full py-3 bg-primary-fixed/10 border border-primary-fixed/50 text-primary-fixed font-bold hover:bg-primary-fixed/20 transition-all flex items-center justify-center gap-3"
+                  disabled
+                  aria-disabled="true"
+                  title="Portfolio demo — no containment action"
+                  className="mt-6 w-full py-3 bg-primary-fixed/10 border border-primary-fixed/50 text-primary-fixed font-bold opacity-50 cursor-not-allowed flex items-center justify-center gap-3"
                 >
                   <Gavel size={16} aria-hidden /> Sample containment (no-op)
                 </button>
@@ -215,12 +249,13 @@ export const Labs = () => {
               <Wrench size={18} aria-hidden /> SIEM_QUERIES_TOOLBOX
             </h2>
             <div className="flex flex-col gap-3">
-              <p className="text-[11px] text-on-surface-variant mb-2">Example snippets (not wired to an editor):</p>
+              <p className="text-[11px] text-on-surface-variant mb-2">Click a snippet to copy to clipboard (portfolio demo):</p>
               {labDemoToolboxQueries.map((query, i) => (
                 <button
                   key={i}
                   type="button"
-                  className="group w-full text-left font-mono text-[11px] border border-primary-fixed/20 p-3 bg-surface-variant/10 hover:bg-primary-fixed/10 hover:border-primary-fixed transition-all relative overflow-hidden"
+                  onClick={() => onCopyQuery(query)}
+                  className="group w-full text-left font-mono text-[11px] border border-primary-fixed/20 p-3 bg-surface-variant/10 hover:bg-primary-fixed/10 hover:border-primary-fixed transition-all relative overflow-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-fixed"
                 >
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-fixed scale-y-0 group-hover:scale-y-100 transition-transform origin-top" aria-hidden />
                   <div className="text-on-surface truncate pr-6 group-hover:text-primary-fixed transition-colors italic">{query}</div>

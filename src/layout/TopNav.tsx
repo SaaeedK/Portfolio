@@ -95,6 +95,17 @@ export const TopNav = () => {
                   {item.name}
                 </NavLink>
               ))}
+              <a
+                href={resumeHref}
+                onClick={() => setIsMenuOpen(false)}
+                className="terminal-button inline-flex items-center justify-center gap-2 p-2"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Opens résumé PDF in a new tab"
+              >
+                <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
+                Résumé
+              </a>
             </div>
           </motion.div>
         )}

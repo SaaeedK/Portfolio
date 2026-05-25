@@ -1,5 +1,6 @@
 import { Terminal, History, Blocks, Activity, Wifi, Bug, FileJson, Cloud, Globe, Plus } from 'lucide-react';
 import { motion } from 'motion/react';
+import { NavLink } from 'react-router-dom';
 import { labs, commits, projects } from '@/data/portfolio';
 import { cn } from '@/lib/utils';
 import { site } from '@/data/site';
@@ -49,12 +50,15 @@ export const Home = () => {
           {labs.map((lab, index) => {
             const heights = lab.visualizerHeights ?? defaultHeights;
             return (
-              <motion.article
+              <motion.div
                 key={lab.id}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: index * 0.1 }}
-                className="bento-card rounded-lg p-6 flex flex-col gap-4 min-h-[220px] group relative"
+              >
+              <NavLink
+                to="/labs"
+                className="bento-card rounded-lg p-6 flex flex-col gap-4 min-h-[220px] group relative focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-fixed"
               >
                 <div className="flex justify-between items-start">
                   <div className="bg-surface-variant/50 text-on-surface-variant font-mono text-[10px] px-2 py-1 rounded border border-outline-variant">
@@ -98,7 +102,8 @@ export const Home = () => {
                     />
                   ))}
                 </div>
-              </motion.article>
+              </NavLink>
+              </motion.div>
             );
           })}
         </div>
@@ -155,39 +160,71 @@ export const Home = () => {
             DEPLOYED_PROJECTS
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
-            {projects.map((project, index) => (
-              <motion.div
-                key={project.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="bento-card rounded-lg p-5 flex flex-col justify-between group border-primary-fixed/10"
-              >
-                <div className="flex justify-between items-start">
-                  <div className="p-2 rounded bg-primary-fixed/5 text-primary-fixed">
-                    {project.icon === 'data_object' && <FileJson size={20} aria-hidden />}
-                    {project.icon === 'cloud' && <Cloud size={20} aria-hidden />}
-                    {project.icon === 'language' && <Globe size={20} aria-hidden />}
+            {projects.map((project, index) => {
+              const cardClass =
+                'bento-card rounded-lg p-5 flex flex-col justify-between group border-primary-fixed/10 h-full';
+              const inner = (
+                <>
+                  <div className="flex justify-between items-start">
+                    <div className="p-2 rounded bg-primary-fixed/5 text-primary-fixed">
+                      {project.icon === 'data_object' && <FileJson size={20} aria-hidden />}
+                      {project.icon === 'cloud' && <Cloud size={20} aria-hidden />}
+                      {project.icon === 'language' && <Globe size={20} aria-hidden />}
+                    </div>
+                    <div className="font-mono text-[9px] text-on-surface-variant bg-background px-1.5 py-0.5 border border-outline-variant">
+                      {project.tech}
+                    </div>
                   </div>
-                  <div className="font-mono text-[9px] text-on-surface-variant bg-background px-1.5 py-0.5 border border-outline-variant">
-                    {project.tech}
+                  <div className="mt-4">
+                    <h3
+                      className={cn(
+                        'font-bold text-primary transition-colors',
+                        project.repoUrl && 'group-hover:text-primary-fixed'
+                      )}
+                    >
+                      {project.title}
+                    </h3>
+                    <p className="font-mono text-[11px] text-on-surface-variant mt-1 line-clamp-2 leading-relaxed">
+                      {project.description}
+                    </p>
                   </div>
-                </div>
-                <div className="mt-4">
-                  <h3 className="font-bold text-primary group-hover:text-primary-fixed transition-colors">{project.title}</h3>
-                  <p className="font-mono text-[11px] text-on-surface-variant mt-1 line-clamp-2 leading-relaxed">
-                    {project.description}
-                  </p>
-                </div>
-                <div className="mt-4 flex justify-between items-center text-[10px] font-mono">
-                  <span className="text-secondary-fixed/60">STATUS: {project.status}</span>
-                </div>
-              </motion.div>
-            ))}
+                  <div className="mt-4 flex justify-between items-center text-[10px] font-mono">
+                    <span className="text-secondary-fixed/60">STATUS: {project.status}</span>
+                  </div>
+                </>
+              );
+              return (
+                <motion.div
+                  key={project.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  {project.repoUrl ? (
+                    <a
+                      href={project.repoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(cardClass, 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-fixed')}
+                    >
+                      {inner}
+                    </a>
+                  ) : (
+                    <div className={cn(cardClass, 'opacity-90')} aria-label={`${project.title} — portfolio demo, no repository link`}>
+                      {inner}
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
 
-            <div className="bento-card rounded-lg p-5 flex flex-col items-center justify-center border-dashed border-primary-fixed/30 bg-transparent hover:bg-primary-fixed/5 transition-all cursor-pointer group">
-              <Plus size={32} className="text-primary-fixed/40 group-hover:scale-110 transition-transform" aria-hidden />
+            <div
+              className="bento-card rounded-lg p-5 flex flex-col items-center justify-center border-dashed border-primary-fixed/30 bg-transparent opacity-70"
+              aria-label="Portfolio placeholder — not a repository link"
+            >
+              <Plus size={32} className="text-primary-fixed/40" aria-hidden />
               <span className="font-mono text-xs text-primary-fixed/40 mt-2 font-bold tracking-widest">NEW_REPO</span>
+              <span className="font-mono text-[10px] text-on-surface-variant mt-2">Portfolio placeholder</span>
             </div>
           </div>
         </section>
