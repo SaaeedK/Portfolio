@@ -111,7 +111,6 @@ async function main() {
 
   // --- Header ---
   drawText('Saaeed Khan', { size: 22, bold: true, lineGap: 4 });
-  drawText('Cybersecurity & Information Technology Professional', { size: 10, oblique: true, color: COLORS.muted, lineGap: 6 });
   drawText('U.S. Security Clearance: Eligible', { size: 9, bold: true, color: COLORS.accent, lineGap: 8 });
   drawLine(MARGIN, PAGE.width - MARGIN);
   drawText('Contact via portfolio form or LinkedIn — github.com/SaaeedK  |  linkedin.com/in/saaeed-khan', {
