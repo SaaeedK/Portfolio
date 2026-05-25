@@ -54,7 +54,7 @@ Imports use the `@/*` alias (resolved to [`src/`](src/)) via [`vite.config.ts`](
 
 - Default résumé URL is **`/resume.pdf`** (header **Résumé** button; footer has a plain text link). Links use **`target="_blank"`**.
 - **`public/resume.pdf` must be a real binary PDF** (starts with `%PDF-`), not a text file — otherwise browsers show “can’t open this file.” Use a **redacted** export: no email, phone, or street address in the file; reachability via **`/comms`** and LinkedIn.
-- Regenerate the placeholder with `node scripts/generate-resume-pdf.mjs`, or replace the file with your own redacted export before production deploy.
+- Regenerate from source with `node scripts/generate-resume-pdf.mjs` (uses `pdf-lib`; content lives in that script), or replace the file with your own redacted export.
 - To use another path or an external PDF, set **`VITE_RESUME_URL`** to e.g. `/cv.pdf` or `https://...`.
 
 ## Editing content
