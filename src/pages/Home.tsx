@@ -1,13 +1,17 @@
-import { Terminal, History, Blocks, Activity, Wifi, Bug, FileJson, Cloud, Globe, Plus } from 'lucide-react';
+import { Terminal, History, Blocks, Activity, Wifi, Bug, FileJson, Cloud, Globe, Plus, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { NavLink } from 'react-router-dom';
-import { labs, commits, projects } from '@/data/portfolio';
+import { labs, projects } from '@/data/portfolio';
 import { cn } from '@/lib/utils';
-import { site } from '@/data/site';
+import { site, externalHref } from '@/data/site';
+import { useGithubCommits } from '@/hooks/useGithubCommits';
 
 const defaultHeights = [6, 12, 8, 14, 10, 9, 11, 7, 13, 8, 10, 12];
 
 export const Home = () => {
+  const { commits, status, source, repo, latestCommitId } = useGithubCommits();
+  const githubProfile = externalHref(site.githubUrl, '#');
+
   return (
     <div className="flex flex-col gap-8">
       <section className="bento-card rounded-lg p-6 md:p-10 flex flex-col md:flex-row justify-between items-start md:items-center relative overflow-hidden group">
@@ -113,45 +117,103 @@ export const Home = () => {
         <section className="col-span-1 md:col-span-6 bento-card rounded-lg p-8">
           <h2 className="text-2xl font-bold text-primary flex items-center gap-4 mb-8">
             <History size={24} className="text-primary-fixed shrink-0" aria-hidden />
-            COMMIT_HISTORY // RESUME
+            COMMIT HISTORY // <span className="text-primary-fixed">PORTFOLIO</span>
           </h2>
-          <div className="relative border-l-2 border-primary-fixed/20 ml-4 space-y-12 pb-4">
-            {commits.map((commit, index) => (
-              <motion.div
-                key={commit.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.15 }}
-                className="relative pl-8"
-              >
-                <div
-                  className={cn(
-                    'absolute w-4 h-4 rounded-full -left-[9px] top-1 border-4 border-background transition-all duration-500',
-                    index === 0
-                      ? 'bg-primary-fixed shadow-[0_0_10px_rgba(0,251,251,0.8)]'
-                      : 'bg-surface-variant scale-75'
-                  )}
-                />
-                <div className="font-mono text-xs text-secondary-fixed mb-1 flex items-center gap-2">
-                  commit {commit.hash}{' '}
-                  {commit.branch && <span className="opacity-60">({commit.branch})</span>}
-                </div>
-                <h3 className="text-base font-bold text-primary">
-                  {commit.role} @ {commit.company}
-                </h3>
-                <div className="mt-2 space-y-1">
-                  {commit.details.map((detail, dIndex) => (
-                    <div key={dIndex} className="font-mono text-xs text-on-surface-variant flex items-start gap-2">
-                      <span className="text-primary-fixed">&gt;</span> {detail}
+          {status === 'loading' && (
+            <div className="flex items-center gap-3 font-mono text-xs text-on-surface-variant py-8">
+              <Loader2 size={16} className="animate-spin text-primary-fixed" aria-hidden />
+              Fetching commits from GitHub…
+            </div>
+          )}
+          {status === 'error' && (
+            <p className="font-mono text-xs text-on-surface-variant py-4">
+              Could not load commits for <span className="text-primary-fixed">{repo}</span>. Ensure the
+              repo is <span className="text-primary-fixed">public</span> on GitHub and run{' '}
+              <span className="text-primary-fixed">npm run build</span> (or redeploy Pages) to refresh the
+              commit cache. Profile:{' '}
+              {githubProfile !== '#' ? (
+                <a href={githubProfile} className="text-primary-fixed hover:underline" target="_blank" rel="noopener noreferrer">
+                  GitHub
+                </a>
+              ) : (
+                'GitHub'
+              )}
+              .
+            </p>
+          )}
+          {status === 'ready' && (
+            <>
+              {source === 'static' && (
+                <p className="font-mono text-[10px] text-outline-variant mb-6 -mt-4">
+                  Cached at build · refreshes on deploy
+                </p>
+              )}
+              <div className="relative border-l-2 border-primary-fixed/20 ml-4 space-y-12 pb-4">
+                {commits.map((commit, index) => (
+                  <motion.div
+                    key={commit.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.15 }}
+                    className="relative pl-8"
+                  >
+                    <div
+                      className={cn(
+                        'absolute w-4 h-4 rounded-full -left-[9px] top-1 border-4 border-background transition-all duration-500',
+                        commit.id === latestCommitId
+                          ? 'bg-primary-fixed shadow-[0_0_10px_rgba(0,251,251,0.8)]'
+                          : 'bg-surface-variant scale-75'
+                      )}
+                      aria-hidden
+                    />
+                    <div className="font-mono text-xs text-secondary-fixed mb-1 flex items-center gap-2 flex-wrap">
+                      <a
+                        href={commit.commitUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-primary-fixed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-fixed"
+                      >
+                        commit {commit.hash}
+                      </a>
+                      {commit.branch && <span className="opacity-60">({commit.branch})</span>}
                     </div>
-                  ))}
-                </div>
-                <div className="mt-3 text-[10px] font-mono text-outline-variant uppercase tracking-widest">
-                  Date: {commit.date}
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                    <h3 className="text-base font-bold text-primary">
+                      <a
+                        href={commit.commitUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-primary-fixed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-fixed"
+                      >
+                        {commit.message}
+                      </a>
+                    </h3>
+                    <div className="mt-1 font-mono text-[10px] text-on-surface-variant">
+                      <a
+                        href={commit.repoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-secondary-fixed/80 hover:text-secondary-fixed"
+                      >
+                        {commit.repoFullName}
+                      </a>
+                    </div>
+                    {commit.details.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {commit.details.map((detail, dIndex) => (
+                          <div key={dIndex} className="font-mono text-xs text-on-surface-variant flex items-start gap-2">
+                            <span className="text-primary-fixed">&gt;</span> {detail}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-3 text-[10px] font-mono text-outline-variant uppercase tracking-widest">
+                      Date: {commit.date}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </>
+          )}
         </section>
 
         <section className="col-span-1 md:col-span-6 flex flex-col">

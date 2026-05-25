@@ -10,14 +10,19 @@ export interface Lab {
   visualizerHeights?: number[];
 }
 
-export interface Commit {
+/** Recent commit from the owner's public GitHub repositories. */
+export interface GithubCommit {
   id: string;
   hash: string;
-  role: string;
-  company: string;
+  branch?: string;
+  message: string;
+  repo: string;
+  repoFullName: string;
+  repoUrl: string;
+  commitUrl: string;
   details: string[];
   date: string;
-  branch?: string;
+  isoDate: string;
 }
 
 export interface Project {

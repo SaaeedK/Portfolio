@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -15,7 +15,13 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { copyText } from '@/lib/clipboard';
-import { computeLabMetrics, highlightTokenInText, rowSeverityClass } from '@/lib/labScenario';
+import {
+  computeLabMetrics,
+  formatLabRowTime,
+  highlightTokenInText,
+  rowSeverityClass,
+  sortLabRowsByTime,
+} from '@/lib/labScenario';
 import { useLabScenario } from '@/hooks/useLabScenario';
 import { validateSecureQueryInput } from '@/lib/secureInput';
 import { aggregatesFromRows, filterLabRows, isLabQueryFiltered } from '@/lib/splQuery';
@@ -24,12 +30,15 @@ import { labs } from '@/data/portfolio';
 
 export const Labs = () => {
   const navigate = useNavigate();
-  const { load, scenario, labId, scenarioIds, setLabId } = useLabScenario();
+  const { load, scenario, labId, scenarioIds, setLabId, dataRevision } = useLabScenario();
   const [copyStatus, setCopyStatus] = useState('');
-  const [queryText, setQueryText] = useState('');
+  /** Per-lab SPL drafts so switching tabs never filters rows with another lab's query. */
+  const [queryByLab, setQueryByLab] = useState<Record<string, string>>({});
   const [queryError, setQueryError] = useState('');
 
   const labMeta = useMemo(() => labs.find((l) => l.id === labId), [labId]);
+
+  const queryText = scenario ? (queryByLab[scenario.id] ?? scenario.query) : '';
 
   const queryValid = useMemo(() => validateSecureQueryInput(queryText), [queryText]);
 
@@ -39,32 +48,23 @@ export const Labs = () => {
       return {
         filteredRows: [] as typeof scenario.rows,
         aggregates: [] as typeof scenario.aggregates,
-        metrics: computeLabMetrics(scenario, { rows: [], aggregates: [], useFilteredTotals: true }),
+        metrics: computeLabMetrics(scenario, { rows: [], aggregates: [] }),
         isFiltered: false,
         queryBlocked: true,
       };
     }
     const activeQuery = queryValid.value;
-    const filteredRows = filterLabRows(scenario.rows, activeQuery);
-    const isFiltered = isLabQueryFiltered(scenario.rows, activeQuery, scenario.query);
+    const filteredRows = sortLabRowsByTime(filterLabRows(scenario.rows, activeQuery));
+    const isFiltered = isLabQueryFiltered(scenario.rows, activeQuery);
     const aggregates = isFiltered ? aggregatesFromRows(filteredRows) : scenario.aggregates;
-    const metrics = computeLabMetrics(scenario, {
-      rows: filteredRows,
-      aggregates,
-      useFilteredTotals: isFiltered,
-    });
+    const metrics = computeLabMetrics(scenario, { rows: filteredRows, aggregates });
     return { filteredRows, aggregates, metrics, isFiltered, queryBlocked: false };
   }, [scenario, queryValid]);
 
-  useEffect(() => {
-    if (!scenario) return;
-    setQueryText(scenario.query);
-    setQueryError('');
-  }, [scenario]);
-
   const onQueryChange = (value: string) => {
+    if (!scenario) return;
     const check = validateSecureQueryInput(value);
-    setQueryText(check.value);
+    setQueryByLab((prev) => ({ ...prev, [scenario.id]: check.value }));
     setQueryError(check.ok ? '' : check.error);
   };
 
@@ -103,15 +103,6 @@ export const Labs = () => {
     URL.revokeObjectURL(url);
   };
 
-  if (load.status === 'loading') {
-    return (
-      <div className="flex flex-col items-center justify-center gap-4 min-h-[320px] font-mono text-sm text-on-surface-variant">
-        <Loader2 className="animate-spin text-primary-fixed" size={28} aria-hidden />
-        <p>Loading lab scenario data…</p>
-      </div>
-    );
-  }
-
   if (load.status === 'error' || !scenario) {
     return (
       <div className="flex flex-col gap-4 max-w-xl">
@@ -137,8 +128,19 @@ export const Labs = () => {
   return (
     <div className="flex flex-col gap-8">
       <p className="font-mono text-[11px] text-on-surface-variant border border-outline-variant/40 rounded px-3 py-2 bg-surface-variant/20 max-w-3xl">
-        Scenario rows load from <code className="text-primary-fixed">/data/lab-scenarios.json</code>. Edit the SPL box to
-        filter results in your browser only — queries are validated and never sent to Splunk or SQL backends.
+        Scenario rows are bundled from{' '}
+        <code className="text-primary-fixed">src/data/lab-scenarios.json</code> (revision{' '}
+        <span className="text-secondary-fixed">{dataRevision}</span>
+        {scenario?.rows[0] ? (
+          <>
+            {' '}
+            · sample _time{' '}
+            <span className="text-secondary-fixed">{formatLabRowTime(scenario.rows[0].time)}</span>
+          </>
+        ) : null}
+        ). After editing JSON, restart <code className="text-primary-fixed">npm run dev</code> or run{' '}
+        <code className="text-primary-fixed">npm run build</code> before preview/deploy — not a live fetch. SPL filters rows
+        in-browser only.
         {filteredView.queryBlocked ? (
           <span className="text-error-fixed"> Query blocked — results withheld until input is safe.</span>
         ) : filteredView.isFiltered ? (
@@ -198,7 +200,17 @@ export const Labs = () => {
           <button
             type="button"
             className="font-mono text-xs text-on-surface-variant hover:text-primary-fixed flex items-center gap-2"
-            onClick={() => setLabId(scenarioIds[0] ?? 'LAB_01')}
+            onClick={() => {
+              if (scenario) {
+                setQueryByLab((prev) => {
+                  const next = { ...prev };
+                  delete next[scenario.id];
+                  return next;
+                });
+                setQueryError('');
+              }
+              setLabId(scenarioIds[0] ?? 'LAB_01');
+            }}
           >
             <History size={16} aria-hidden /> Reset view
           </button>
@@ -256,7 +268,7 @@ export const Labs = () => {
                 <Terminal size={18} className="text-primary-fixed" aria-hidden />
                 <h2 className="font-mono text-xs font-bold text-primary-fixed tracking-widest uppercase">RAW_LOG_STREAM // RESULTS</h2>
               </div>
-              <div className="hidden sm:flex items-center gap-6 font-mono text-[10px]">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-1 font-mono text-[10px]">
                 <span className="text-on-surface-variant">
                   EVENTS:{' '}
                   <span className={cn('text-secondary-fixed', filteredView.queryBlocked && 'text-error-fixed')}>
@@ -268,8 +280,13 @@ export const Labs = () => {
                     <span className="text-on-surface-variant/60"> (filtered)</span>
                   ) : null}
                 </span>
-                <span className="text-on-surface-variant">
-                  TIME: <span className="text-on-surface">{filteredView.metrics.queryTimeSec}s</span>
+                {filteredView.metrics.eventSpanSec ? (
+                  <span className="text-on-surface-variant" title="UTC span from earliest to latest _time in results">
+                    SPAN: <span className="text-on-surface">{filteredView.metrics.eventSpanSec}s</span>
+                  </span>
+                ) : null}
+                <span className="text-on-surface-variant" title="Simulated query latency">
+                  LATENCY: <span className="text-on-surface">{filteredView.metrics.queryTimeSec}s</span>
                 </span>
                 <button
                   type="button"
@@ -287,7 +304,7 @@ export const Labs = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="text-on-surface/40 border-b border-outline-variant/30">
-                    <th className="pb-3 pr-4 font-normal">Time</th>
+                    <th className="pb-3 pr-4 font-normal">Time (UTC)</th>
                     <th className="pb-3 pr-4 font-normal">Event Type</th>
                     <th className="pb-3 font-normal">Raw Data</th>
                   </tr>
@@ -304,7 +321,9 @@ export const Labs = () => {
                   ) : null}
                   {filteredView.filteredRows.map((log, i) => (
                     <tr key={`${log.time}-${log.type}-${i}`} className="border-b border-outline-variant/10">
-                      <td className="py-3 pr-4 text-on-surface/60 whitespace-nowrap">{log.time}</td>
+                      <td className="py-3 pr-4 text-on-surface/60 whitespace-nowrap tabular-nums">
+                        {formatLabRowTime(log.time)}
+                      </td>
                       <td className="py-3 pr-4">
                         <span className={cn('px-2 py-0.5 rounded text-[9px] font-bold border', rowSeverityClass(log))}>
                           {log.type}

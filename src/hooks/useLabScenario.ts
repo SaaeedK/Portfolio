@@ -1,42 +1,24 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { LAB_DATA_REVISION, labScenarios } from '@/data/labScenarios';
 import { computeLabMetrics, findScenarioById } from '@/lib/labScenario';
-import type { LabScenario } from '@/types';
-
-const SCENARIOS_URL = '/data/lab-scenarios.json';
 
 type LoadState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
-  | { status: 'ready'; scenarios: LabScenario[] };
+  | { status: 'ready'; scenarios: typeof labScenarios };
 
 export function useLabScenario() {
   const [searchParams, setSearchParams] = useSearchParams();
   const labId = searchParams.get('lab');
-  const [load, setLoad] = useState<LoadState>({ status: 'loading' });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadScenarios() {
-      try {
-        const res = await fetch(SCENARIOS_URL, { headers: { Accept: 'application/json' } });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as LabScenario[];
-        if (!Array.isArray(data) || data.length === 0) {
-          throw new Error('Empty scenario list');
-        }
-        if (!cancelled) setLoad({ status: 'ready', scenarios: data });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to load lab data';
-        if (!cancelled) setLoad({ status: 'error', message });
-      }
+  const load: LoadState = useMemo(() => {
+    try {
+      return { status: 'ready', scenarios: labScenarios };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load lab data';
+      return { status: 'error', message };
     }
-
-    loadScenarios();
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   useEffect(() => {
@@ -64,5 +46,6 @@ export function useLabScenario() {
     labId: scenario?.id ?? labId,
     scenarioIds,
     setLabId,
+    dataRevision: LAB_DATA_REVISION,
   };
 }

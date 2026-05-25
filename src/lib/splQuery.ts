@@ -19,6 +19,12 @@ const SOURCETYPE_HINTS: Record<string, string[]> = {
 const FAILURE_HINTS = ['fail', 'failed', 'failure', 'sshd_fail', 'waf_block', 'http_403', 'dns_alert', 'block'];
 const SUCCESS_HINTS = ['success', 'accepted', 'sshd_success', 'waf_allow', 'http_200', 'allow'];
 
+/** SPL search head only — pipeline stages (| stats, | where, …) do not filter raw rows here. */
+function searchHead(query: string): string {
+  const pipe = query.indexOf('|');
+  return (pipe === -1 ? query : query.slice(0, pipe)).trim();
+}
+
 interface QueryConstraints {
   sourcetypes: string[];
   users: string[];
@@ -138,24 +144,23 @@ function extractBareHostPatterns(query: string): string[] {
 }
 
 function buildConstraints(query: string): QueryConstraints {
-  const q = query.toLowerCase();
-  const { minStatus, exactStatus } = extractStatusConstraints(query);
-  const queryField = extractFieldValues(query, 'query').map(normalizeSearchPattern).filter(Boolean);
-  const uriField = extractFieldValues(query, 'uri').map(normalizeSearchPattern).filter(Boolean);
-  const srcIpField = extractFieldValues(query, 'src_ip');
-  const hostPatterns = [
-    ...new Set([...queryField, ...extractBareHostPatterns(query)]),
-  ];
+  const head = searchHead(query);
+  const q = head.toLowerCase();
+  const { minStatus, exactStatus } = extractStatusConstraints(head);
+  const queryField = extractFieldValues(head, 'query').map(normalizeSearchPattern).filter(Boolean);
+  const uriField = extractFieldValues(head, 'uri').map(normalizeSearchPattern).filter(Boolean);
+  const srcIpField = extractFieldValues(head, 'src_ip');
+  const hostPatterns = [...new Set([...queryField, ...extractBareHostPatterns(head)])];
   return {
-    sourcetypes: extractSourcetypes(query),
-    users: extractFieldValues(query, 'user'),
+    sourcetypes: extractSourcetypes(head),
+    users: extractFieldValues(head, 'user'),
     hostPatterns,
     uriPatterns: uriField,
-    requireFailure: hasFailureIntent(query),
-    requireSuccess: hasSuccessIntent(query),
+    requireFailure: hasFailureIntent(head),
+    requireSuccess: hasSuccessIntent(head),
     minStatus,
     exactStatus,
-    quotedPhrases: extractQuotedPhrases(query),
+    quotedPhrases: extractQuotedPhrases(head),
     ips: [...new Set([...(q.match(IPV4) ?? []), ...srcIpField])],
   };
 }
@@ -222,14 +227,6 @@ export function aggregatesFromRows(rows: LabLogRow[]): LabAggregate[] {
     .sort((a, b) => b.count - a.count);
 }
 
-export function isLabQueryFiltered(
-  rows: LabLogRow[],
-  query: string,
-  baselineQuery?: string,
-): boolean {
-  const filtered = filterLabRows(rows, query);
-  if (baselineQuery && query.trim() === baselineQuery.trim()) {
-    return filtered.length !== rows.length;
-  }
-  return filtered.length !== rows.length || query.trim().length > 0;
+export function isLabQueryFiltered(rows: LabLogRow[], query: string): boolean {
+  return filterLabRows(rows, query).length !== rows.length;
 }

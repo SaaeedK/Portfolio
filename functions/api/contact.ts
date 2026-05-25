@@ -4,6 +4,8 @@
  * No database → no SQL; inputs are validated as plain strings before HTTP to Resend.
  */
 
+import { jsonResponse } from '../lib/responseHeaders';
+
 export interface Env {
   RESEND_API_KEY: string;
   CONTACT_TO_EMAIL: string;
@@ -31,12 +33,6 @@ type ContactBody = {
   website?: unknown;
   'cf-turnstile-response'?: unknown;
 };
-
-const JSON_HEADERS = {
-  'Content-Type': 'application/json; charset=utf-8',
-  'X-Content-Type-Options': 'nosniff',
-  'Cache-Control': 'no-store',
-} as const;
 
 const MAX_BODY_BYTES = 24_576;
 const MAX_NAME = 120;
@@ -85,10 +81,6 @@ const DISPOSABLE_DOMAINS = new Set(
     'discardmail.com',
   ].map((d) => d.toLowerCase()),
 );
-
-function jsonResponse(status: number, body: Record<string, unknown>): Response {
-  return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
-}
 
 function envBool(v: string | undefined): boolean {
   const s = v?.trim().toLowerCase();
@@ -306,10 +298,6 @@ export async function onRequestPost(context: {
     return jsonResponse(400, { error: 'disposable_email' });
   }
 
-  if (!(await checkRateLimits(env, ip))) {
-    return jsonResponse(429, { error: 'rate_limited' });
-  }
-
   const token =
     typeof parsed['cf-turnstile-response'] === 'string' ? parsed['cf-turnstile-response'].trim() : '';
   const turnstileSecret = env.TURNSTILE_SECRET?.trim();
@@ -329,6 +317,10 @@ export async function onRequestPost(context: {
 
   if (!(await domainHasMx(domain))) {
     return jsonResponse(400, { error: 'email_domain_unreachable' });
+  }
+
+  if (!(await checkRateLimits(env, ip))) {
+    return jsonResponse(429, { error: 'rate_limited' });
   }
 
   const safeName = nameRaw.replace(/[\r\n]+/g, ' ').slice(0, MAX_NAME);

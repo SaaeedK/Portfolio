@@ -2,6 +2,7 @@
 # Plaintext vars → [vars] below (commit after filling placeholders).
 # Secrets → Dashboard only (Settings → Variables and Secrets → Secrets):
 #   RESEND_API_KEY, TURNSTILE_SECRET, CONTACT_TO_EMAIL (do not commit inbox addresses).
+#   GITHUB_TOKEN (optional — only while repo is private; public SaaeedK/Portfolio needs no token).
 # Docs: https://developers.cloudflare.com/pages/functions/wrangler-configuration/
 
 name = "cyber-portfolio"
@@ -21,6 +22,7 @@ ALLOWED_ORIGINS = "https://portfolio-6v0.pages.dev"
 # Client (public; embedded in the JS bundle)
 VITE_TURNSTILE_SITE_KEY = "0x4AAAAAADNDV1pHsmwRTk_a"
 VITE_GITHUB_URL = "https://github.com/SaaeedK"
+VITE_GITHUB_REPO = "SaaeedK/Portfolio"
 VITE_LINKEDIN_URL = "https://linkedin.com/in/saaeed-khan"
 
 # Preview: looser geo (wrangler pages dev has no cf.country)

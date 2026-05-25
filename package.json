@@ -7,11 +7,14 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "vite --port=3000 --host=0.0.0.0",
+    "dev": "vite --port=3000 --host=127.0.0.1",
+    "predev": "node scripts/sync-lab-scenarios.mjs && node scripts/sync-github-commits.mjs",
+    "prebuild": "node scripts/sync-lab-scenarios.mjs && node scripts/sync-github-commits.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "node --input-type=module -e \"import fs from 'node:fs'; try { fs.rmSync('dist', { recursive: true, force: true }); } catch (_) {}\"",
     "lint": "tsc --noEmit && tsc --noEmit -p tsconfig.functions.json && eslint .",
+    "security:check": "node scripts/security-check.mjs",
     "pages:dev": "npm run build && wrangler pages dev dist --ip 127.0.0.1 --port 8788",
     "kv:create": "wrangler kv namespace create CONTACT_RATE_LIMIT",
     "kv:enable": "node scripts/enable-contact-kv.mjs"

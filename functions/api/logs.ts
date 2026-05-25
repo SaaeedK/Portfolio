@@ -3,6 +3,8 @@
  * Read-only curated tail: no user input, no SQL — rotates portfolio sample lines with fresh timestamps.
  */
 
+import { jsonResponse } from '../lib/responseHeaders';
+
 export interface Env {
   ALLOWED_ORIGINS?: string;
   CONTACT_RATE_LIMIT?: KVNamespace;
@@ -10,18 +12,8 @@ export interface Env {
 
 type FeedTemplate = { id: string; type: string; message: string };
 
-const JSON_HEADERS = {
-  'Content-Type': 'application/json; charset=utf-8',
-  'X-Content-Type-Options': 'nosniff',
-  'Cache-Control': 'no-store',
-} as const;
-
 const RL_MAX_PER_MINUTE = 30;
 const RATE_MINUTE_MS = 60_000;
-
-function jsonResponse(status: number, body: Record<string, unknown>): Response {
-  return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
-}
 
 function checkOrigin(request: Request, env: Env): Response | null {
   const raw = env.ALLOWED_ORIGINS?.trim();

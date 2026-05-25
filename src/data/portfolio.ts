@@ -1,4 +1,4 @@
-import type { Commit, Lab, Project } from '@/types';
+import type { Lab, Project } from '@/types';
 
 export const labs: Lab[] = [
   {
@@ -33,34 +33,6 @@ export const labs: Lab[] = [
     difficulty: 'CRITICAL',
     icon: 'bug_report',
     visualizerHeights: [10, 18, 8, 12, 14, 9, 16, 7, 11, 13, 6, 17],
-  },
-];
-
-export const commits: Commit[] = [
-  {
-    id: '1',
-    hash: '9f8a7b6',
-    branch: 'HEAD -> master',
-    role: 'Senior Security Engineer',
-    company: 'CyberDyne',
-    details: ['Implemented zero-trust architecture.', 'Reduced intrusion incidents by 40%.'],
-    date: '2022 - Present',
-  },
-  {
-    id: '2',
-    hash: '3e4d5c2',
-    role: 'Security Analyst',
-    company: 'OmniCorp',
-    details: ['Conduct weekly penetration tests.', 'Managed SIEM dashboard alerts.'],
-    date: '2019 - 2022',
-  },
-  {
-    id: '3',
-    hash: '1a2b3c4',
-    role: 'B.S. Computer Science',
-    company: 'Tech Institute',
-    details: ['Specialization in Information Security.'],
-    date: '2015 - 2019',
   },
 ];
 

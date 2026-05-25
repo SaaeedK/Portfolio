@@ -2,6 +2,10 @@
 
 interface ImportMetaEnv {
   readonly VITE_GITHUB_URL?: string;
+  /** Optional override; defaults to login parsed from VITE_GITHUB_URL. */
+  readonly VITE_GITHUB_USERNAME?: string;
+  /** Portfolio repo as owner/name (default SaaeedK/Portfolio). */
+  readonly VITE_GITHUB_REPO?: string;
   readonly VITE_LINKEDIN_URL?: string;
   readonly VITE_RESUME_URL?: string;
   /** Firebase Web SDK (safe to expose in client). Omit to skip Firebase init. */

@@ -7,22 +7,55 @@ export interface LabAggregateBar extends LabAggregate {
 
 export interface LabScenarioMetrics {
   totalEvents: number;
+  /** Simulated SPL execution latency (header). */
   queryTimeSec: string;
+  /** Wall-clock span from earliest to latest visible row (_time), in seconds. */
+  eventSpanSec: string | null;
   narrativeWeight: number;
   aggregateBars: LabAggregateBar[];
 }
 
+/** Parse curated row timestamps (ISO or legacy `YYYY-MM-DD HH:mm:ss`). */
+export function parseLabRowTime(time: string): Date | null {
+  const trimmed = time.trim();
+  if (!trimmed) return null;
+  const iso = trimmed.includes('T') ? trimmed : `${trimmed.replace(' ', 'T')}Z`;
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** Splunk-style UTC display — consistent across all labs. */
+export function formatLabRowTime(time: string): string {
+  const d = parseLabRowTime(time);
+  if (!d) return time;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+}
+
+export function sortLabRowsByTime(rows: LabLogRow[]): LabLogRow[] {
+  return [...rows].sort((a, b) => {
+    const ta = parseLabRowTime(a.time)?.getTime() ?? 0;
+    const tb = parseLabRowTime(b.time)?.getTime() ?? 0;
+    return ta - tb;
+  });
+}
+
+function eventSpanSec(rows: LabLogRow[]): string | null {
+  const stamps = rows.map((r) => parseLabRowTime(r.time)?.getTime()).filter((t): t is number => t != null);
+  if (stamps.length < 2) return stamps.length === 1 ? '0.0' : null;
+  const span = (Math.max(...stamps) - Math.min(...stamps)) / 1000;
+  return span.toFixed(1);
+}
+
 export function computeLabMetrics(
   scenario: LabScenario,
-  options?: { rows?: LabLogRow[]; aggregates?: LabAggregate[]; useFilteredTotals?: boolean },
+  options?: { rows?: LabLogRow[]; aggregates?: LabAggregate[] },
 ): LabScenarioMetrics {
   const rows = options?.rows ?? scenario.rows;
   const aggregates = options?.aggregates ?? scenario.aggregates;
-  const useFilteredTotals = options?.useFilteredTotals ?? false;
 
-  const totalEvents = useFilteredTotals
-    ? rows.length
-    : aggregates.reduce((sum, row) => sum + row.count, 0);
+  /** Header/table always reflects visible raw rows; aggregate bars carry SIEM-scale totals. */
+  const totalEvents = rows.length;
   const maxCount = Math.max(...aggregates.map((row) => row.count), 1);
   const topCount = maxCount;
 
@@ -39,7 +72,7 @@ export function computeLabMetrics(
 
   const queryTimeSec = (0.15 + rows.length * 0.07 + aggregates.length * 0.12).toFixed(1);
 
-  return { totalEvents, queryTimeSec, narrativeWeight, aggregateBars };
+  return { totalEvents, queryTimeSec, eventSpanSec: eventSpanSec(rows), narrativeWeight, aggregateBars };
 }
 
 export function rowSeverityClass(row: LabLogRow): string {

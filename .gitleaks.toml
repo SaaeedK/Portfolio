@@ -1,0 +1,11 @@
+title = "cyber-portfolio"
+
+[allowlist]
+description = "Public site keys, examples, and lockfile — secrets must stay in Cloudflare Pages Secrets"
+paths = [
+  '''(?:^|/)wrangler\.toml$''',
+  '''(?:^|/)\.env\.example$''',
+  '''(?:^|/)README\.md$''',
+  '''(?:^|/)package-lock\.json$''',
+  '''(?:^|/)public/data/''',
+]
