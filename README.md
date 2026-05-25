@@ -78,14 +78,18 @@ Repo includes [`.node-version`](.node-version) (Node 20) for consistent CI/Pages
    - **Root directory:** `/` (repository root)
 4. Save and deploy the first build.
 
-**2. Production and preview environment variables**
+**2. Environment variables (wrangler.toml + dashboard Secrets)**
 
-In the Pages project → **Settings** → **Environment variables**, add the same keys as [`.env.example`](.env.example) for **Production** (and **Preview** if you want PR previews):
+This repo sets `pages_build_output_dir` in [`wrangler.toml`](wrangler.toml), so Cloudflare manages **plaintext** variables from that file—not from the dashboard **Variables** form (you will see: *“Only Secrets can be managed via the Dashboard”*).
 
-- `VITE_GITHUB_URL`, `VITE_LINKEDIN_URL`, `VITE_RESUME_URL` (optional override for résumé URL or path)
-- Optional Firebase: `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID`
+1. Edit [`wrangler.toml`](wrangler.toml) `[vars]`: `ALLOWED_ORIGINS`, `VITE_TURNSTILE_SITE_KEY`, optional `VITE_GITHUB_URL` / `VITE_LINKEDIN_URL`, etc.
+2. In Pages → **Settings** → **Variables and Secrets** → **Secrets**, add:
+   - `RESEND_API_KEY`
+   - `TURNSTILE_SECRET`
+   - `CONTACT_TO_EMAIL` (your inbox — keep out of git)
+3. Commit and push (or **Retry deployment**) so build + Functions pick up changes.
 
-Trigger **Retry deployment** after changing variables (Vite inlines `VITE_*` at build time).
+Optional Firebase `VITE_FIREBASE_*` can also go in `[vars]` if you use Analytics. KV: uncomment `[[kv_namespaces]]` in `wrangler.toml` after creating a namespace.
 
 **3. Custom domain (optional)**
 

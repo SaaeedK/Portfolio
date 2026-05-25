@@ -1,12 +1,32 @@
-# Cloudflare Pages: bind secrets in the dashboard (Production / Preview), not in git.
-# Local dev: wrangler pages dev dist --ip 127.0.0.1 --port 8788
-# Then run Vite with VITE_DEV_CONTACT_API_PROXY=http://127.0.0.1:8788 (see .env.example).
+# Cloudflare Pages reads this file when pages_build_output_dir is set.
+# Plaintext vars → [vars] below (commit after filling placeholders).
+# Secrets → Dashboard only (Settings → Variables and Secrets → Secrets):
+#   RESEND_API_KEY, TURNSTILE_SECRET, CONTACT_TO_EMAIL (do not commit inbox addresses).
+# Docs: https://developers.cloudflare.com/pages/functions/wrangler-configuration/
 
 name = "cyber-portfolio"
 compatibility_date = "2025-05-01"
 pages_build_output_dir = "dist"
 
-# Optional: create a KV namespace in the dashboard, then bind it here and in Pages → Settings → Functions → KV.
+# --- Functions + build (Vite inlines VITE_* at build time from the build environment) ---
+[vars]
+# Contact API (server) — CONTACT_TO_EMAIL is a dashboard Secret, not stored in git
+CONTACT_REQUIRE_TURNSTILE = "true"
+CONTACT_ALLOWED_COUNTRIES = "US"
+ALLOWED_ORIGINS = "https://portfolio-6v0.pages.dev"
+# Optional verified Resend sender (uncomment and set if needed)
+# CONTACT_FROM = "Portfolio <noreply@yourdomain.com>"
+
+# Client (public; embedded in the JS bundle)
+VITE_TURNSTILE_SITE_KEY = "0x4AAAAAADNDV1pHsmwRTk_a"
+# VITE_GITHUB_URL = "https://github.com/SaaeedK"
+# VITE_LINKEDIN_URL = "https://linkedin.com/in/saaeed-khan"
+
+# Preview: looser geo (wrangler pages dev has no cf.country)
+[env.preview.vars]
+CONTACT_ALLOWED_COUNTRIES = ""
+
+# Optional KV: create namespace in dashboard → Storage & Databases → KV, paste id below, uncomment.
 # [[kv_namespaces]]
 # binding = "CONTACT_RATE_LIMIT"
-# id = "your_kv_namespace_id"
+# id = "YOUR_KV_NAMESPACE_ID"
