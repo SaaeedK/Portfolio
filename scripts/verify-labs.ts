@@ -3,11 +3,19 @@
  * Run: npx --yes tsx scripts/verify-labs.ts
  */
 import scenariosJson from '../src/data/lab-scenarios.json';
+import { formatLabRowTime, sortLabRowsByTime } from '../src/lib/labScenario';
 import { filterLabRows } from '../src/lib/splQuery';
 import { validateSecureQueryInput } from '../src/lib/secureInput';
 import type { LabScenario } from '../src/types';
 
 const scenarios = scenariosJson as LabScenario[];
+
+/** Earliest row _time per lab (UTC) — must match src/data/lab-scenarios.json, not legacy 14:02 placeholders. */
+const EARLIEST_UTC: Record<string, string> = {
+  LAB_01: '2024-10-27 11:05:44',
+  LAB_02: '2024-10-27 15:31:02',
+  LAB_03: '2024-10-27 18:44:01',
+};
 
 const EXPECTED: Record<
   string,
@@ -79,6 +87,18 @@ for (const scenario of scenarios) {
   if (!scenario.rows.some((r) => r.data.includes(scenario.highlightIp))) {
     console.error(`${scenario.id}: highlightIp not found in row data`);
     failed++;
+  }
+
+  const expectedUtc = EARLIEST_UTC[scenario.id];
+  if (expectedUtc) {
+    const earliest = sortLabRowsByTime(scenario.rows)[0];
+    const got = earliest ? formatLabRowTime(earliest.time) : '';
+    if (got !== expectedUtc) {
+      console.error(`${scenario.id}: expected earliest _time ${expectedUtc}, got ${got || '(none)'}`);
+      failed++;
+    } else {
+      console.log(`OK ${scenario.id} earliest _time ${got}`);
+    }
   }
 }
 

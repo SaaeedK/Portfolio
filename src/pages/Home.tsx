@@ -113,7 +113,7 @@ export const Home = () => {
         </div>
       </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
         <section className="col-span-1 md:col-span-6 bento-card rounded-lg p-8">
           <h2 className="text-2xl font-bold text-primary flex items-center gap-4 mb-8">
             <History size={24} className="text-primary-fixed shrink-0" aria-hidden />
@@ -216,15 +216,15 @@ export const Home = () => {
           )}
         </section>
 
-        <section className="col-span-1 md:col-span-6 flex flex-col">
+        <section className="col-span-1 md:col-span-6">
           <h2 className="text-2xl font-bold text-primary flex items-center gap-4 mb-6 border-b border-primary-fixed/20 pb-4">
             <Blocks size={24} className="text-primary-fixed shrink-0" aria-hidden />
             DEPLOYED_PROJECTS
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
             {projects.map((project, index) => {
               const cardClass =
-                'bento-card rounded-lg p-5 flex flex-col justify-between group border-primary-fixed/10 h-full';
+                'bento-card rounded-lg p-5 flex flex-col gap-3 group border-primary-fixed/10';
               const inner = (
                 <>
                   <div className="flex justify-between items-start">
@@ -258,6 +258,7 @@ export const Home = () => {
               return (
                 <motion.div
                   key={project.id}
+                  className="h-auto"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}

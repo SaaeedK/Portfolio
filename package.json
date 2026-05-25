@@ -8,8 +8,8 @@
   },
   "scripts": {
     "dev": "vite --port=3000 --host=127.0.0.1",
-    "predev": "node scripts/sync-lab-scenarios.mjs && node scripts/sync-github-commits.mjs",
-    "prebuild": "node scripts/sync-lab-scenarios.mjs && node scripts/sync-github-commits.mjs",
+    "predev": "node scripts/sync-lab-scenarios.mjs && node scripts/sync-github-commits.mjs && npx --yes tsx scripts/verify-labs.ts",
+    "prebuild": "node scripts/sync-lab-scenarios.mjs && node scripts/sync-github-commits.mjs && npx --yes tsx scripts/verify-labs.ts",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "node --input-type=module -e \"import fs from 'node:fs'; try { fs.rmSync('dist', { recursive: true, force: true }); } catch (_) {}\"",

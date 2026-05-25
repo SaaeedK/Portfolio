@@ -131,11 +131,13 @@ export const Labs = () => {
         Scenario rows are bundled from{' '}
         <code className="text-primary-fixed">src/data/lab-scenarios.json</code> (revision{' '}
         <span className="text-secondary-fixed">{dataRevision}</span>
-        {scenario?.rows[0] ? (
+        {scenario?.rows.length ? (
           <>
             {' '}
-            · sample _time{' '}
-            <span className="text-secondary-fixed">{formatLabRowTime(scenario.rows[0].time)}</span>
+            · earliest _time{' '}
+            <span className="text-secondary-fixed">
+              {formatLabRowTime(sortLabRowsByTime(scenario.rows)[0]!.time)}
+            </span>
           </>
         ) : null}
         ). After editing JSON, restart <code className="text-primary-fixed">npm run dev</code> or run{' '}
