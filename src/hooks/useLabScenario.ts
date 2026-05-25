@@ -39,6 +39,11 @@ export function useLabScenario() {
     };
   }, []);
 
+  useEffect(() => {
+    if (load.status !== 'ready' || labId) return;
+    setSearchParams({ lab: load.scenarios[0]!.id }, { replace: true });
+  }, [load, labId, setSearchParams]);
+
   const scenario = useMemo(() => {
     if (load.status !== 'ready') return null;
     return findScenarioById(load.scenarios, labId);

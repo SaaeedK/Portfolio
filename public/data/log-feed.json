@@ -1,0 +1,52 @@
+[
+  {
+    "id": "sys-01",
+    "type": "OK",
+    "message": "SYS_UPDATE: Kernel patched successfully. Version 6.5.0-generic applied."
+  },
+  {
+    "id": "git-01",
+    "type": "COMMIT",
+    "message": "GIT_PUSH: Repository 'auth-microservice' updated. SHA: a1b2c3d."
+  },
+  {
+    "id": "auth-01",
+    "type": "WARNING",
+    "message": "AUTH_FAIL: Multiple failed login attempts detected from IP 192.168.1.105. Rate limiting applied."
+  },
+  {
+    "id": "lab-01",
+    "type": "INFO",
+    "message": "LAB_COMPLETE: Module 'Cryptography 101' finished. Score: 100%. Badge awarded."
+  },
+  {
+    "id": "sec-01",
+    "type": "OK",
+    "message": "SEC_AUDIT: Daily automated dependency scan complete. 0 critical vulnerabilities found."
+  },
+  {
+    "id": "cron-01",
+    "type": "INFO",
+    "message": "CRON_JOB: Database backup routine executed. Archive stored in cold storage."
+  },
+  {
+    "id": "waf-01",
+    "type": "WARNING",
+    "message": "WAF_ALERT: Blocked POST probe from 198.51.100.17 — rule webshell_signature."
+  },
+  {
+    "id": "dns-01",
+    "type": "INFO",
+    "message": "DNS_MONITOR: Elevated query rate to *.update-check.example from 203.0.113.88 (sample)."
+  },
+  {
+    "id": "deploy-01",
+    "type": "COMMIT",
+    "message": "CI_DEPLOY: portfolio@main build succeeded — Cloudflare Pages."
+  },
+  {
+    "id": "health-01",
+    "type": "OK",
+    "message": "HEALTHCHECK: /api/contact reachable; rate limits active."
+  }
+]

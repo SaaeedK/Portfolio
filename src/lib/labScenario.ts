@@ -12,23 +12,32 @@ export interface LabScenarioMetrics {
   aggregateBars: LabAggregateBar[];
 }
 
-export function computeLabMetrics(scenario: LabScenario): LabScenarioMetrics {
-  const totalEvents = scenario.aggregates.reduce((sum, row) => sum + row.count, 0);
-  const maxCount = Math.max(...scenario.aggregates.map((row) => row.count), 1);
+export function computeLabMetrics(
+  scenario: LabScenario,
+  options?: { rows?: LabLogRow[]; aggregates?: LabAggregate[]; useFilteredTotals?: boolean },
+): LabScenarioMetrics {
+  const rows = options?.rows ?? scenario.rows;
+  const aggregates = options?.aggregates ?? scenario.aggregates;
+  const useFilteredTotals = options?.useFilteredTotals ?? false;
+
+  const totalEvents = useFilteredTotals
+    ? rows.length
+    : aggregates.reduce((sum, row) => sum + row.count, 0);
+  const maxCount = Math.max(...aggregates.map((row) => row.count), 1);
   const topCount = maxCount;
 
-  const aggregateBars: LabAggregateBar[] = scenario.aggregates.map((row) => ({
+  const aggregateBars: LabAggregateBar[] = aggregates.map((row) => ({
     ...row,
     severity: Math.round((row.count / maxCount) * 100),
     color: row.count === topCount ? 'bg-error-fixed' : 'bg-secondary-fixed',
   }));
 
-  const failCount = scenario.rows.filter((row) => row.severity === 'error').length;
-  const narrativeWeight = scenario.rows.length
-    ? Math.min(99, Math.max(35, Math.round((failCount / scenario.rows.length) * 55 + 40)))
+  const failCount = rows.filter((row) => row.severity === 'error').length;
+  const narrativeWeight = rows.length
+    ? Math.min(99, Math.max(35, Math.round((failCount / rows.length) * 55 + 40)))
     : 50;
 
-  const queryTimeSec = (0.15 + scenario.rows.length * 0.07 + scenario.aggregates.length * 0.12).toFixed(1);
+  const queryTimeSec = (0.15 + rows.length * 0.07 + aggregates.length * 0.12).toFixed(1);
 
   return { totalEvents, queryTimeSec, narrativeWeight, aggregateBars };
 }

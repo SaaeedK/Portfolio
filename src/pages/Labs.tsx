@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -15,17 +15,51 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { copyText } from '@/lib/clipboard';
-import { highlightTokenInText, rowSeverityClass } from '@/lib/labScenario';
+import { computeLabMetrics, highlightTokenInText, rowSeverityClass } from '@/lib/labScenario';
 import { useLabScenario } from '@/hooks/useLabScenario';
+import { validateSecureQueryInput } from '@/lib/secureInput';
+import { aggregatesFromRows, filterLabRows } from '@/lib/splQuery';
 import { motion } from 'motion/react';
 import { labs } from '@/data/portfolio';
 
 export const Labs = () => {
   const navigate = useNavigate();
-  const { load, scenario, metrics, labId, scenarioIds, setLabId } = useLabScenario();
+  const { load, scenario, labId, scenarioIds, setLabId } = useLabScenario();
   const [copyStatus, setCopyStatus] = useState('');
+  const [queryText, setQueryText] = useState('');
+  const [queryError, setQueryError] = useState('');
 
   const labMeta = useMemo(() => labs.find((l) => l.id === labId), [labId]);
+
+  const queryValid = useMemo(() => validateSecureQueryInput(queryText), [queryText]);
+
+  const filteredView = useMemo(() => {
+    if (!scenario) return null;
+    const activeQuery = queryValid.ok ? queryValid.value : scenario.query;
+    const filteredRows = filterLabRows(scenario.rows, activeQuery);
+    const isFiltered =
+      queryValid.ok &&
+      (activeQuery.trim() !== scenario.query.trim() || filteredRows.length !== scenario.rows.length);
+    const aggregates = isFiltered ? aggregatesFromRows(filteredRows) : scenario.aggregates;
+    const metrics = computeLabMetrics(scenario, {
+      rows: filteredRows,
+      aggregates,
+      useFilteredTotals: isFiltered,
+    });
+    return { filteredRows, aggregates, metrics, isFiltered, queryApplied: queryValid.ok };
+  }, [scenario, queryValid]);
+
+  useEffect(() => {
+    if (!scenario) return;
+    setQueryText(scenario.query);
+    setQueryError('');
+  }, [scenario]);
+
+  const onQueryChange = (value: string) => {
+    const check = validateSecureQueryInput(value);
+    setQueryText(check.value);
+    setQueryError(check.ok ? '' : check.error);
+  };
 
   const onCopyQuery = async (query: string) => {
     const ok = await copyText(query);
@@ -34,7 +68,8 @@ export const Labs = () => {
   };
 
   const onExportJson = () => {
-    if (!scenario || !metrics) return;
+    if (!scenario || !filteredView?.metrics) return;
+    const { metrics } = filteredView;
     const blob = new Blob(
       [
         JSON.stringify(
@@ -70,7 +105,7 @@ export const Labs = () => {
     );
   }
 
-  if (load.status === 'error' || !scenario || !metrics) {
+  if (load.status === 'error' || !scenario) {
     return (
       <div className="flex flex-col gap-4 max-w-xl">
         <p className="font-mono text-sm text-error-fixed">
@@ -83,12 +118,26 @@ export const Labs = () => {
     );
   }
 
+  if (!filteredView) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 min-h-[320px] font-mono text-sm text-on-surface-variant">
+        <Loader2 className="animate-spin text-primary-fixed" size={28} aria-hidden />
+        <p>Preparing scenario view…</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-8">
       <p className="font-mono text-[11px] text-on-surface-variant border border-outline-variant/40 rounded px-3 py-2 bg-surface-variant/20 max-w-3xl">
-        Exercise data is loaded from{' '}
-        <code className="text-primary-fixed">/data/lab-scenarios.json</code> on this site. Metrics (event counts, bars,
-        narrative weight) are computed from that dataset — not from Splunk or a live SIEM.
+        Scenario rows load from <code className="text-primary-fixed">/data/lab-scenarios.json</code>. Edit the SPL box to
+        filter results in your browser only — queries are validated and never sent to Splunk or SQL backends.
+        {filteredView.isFiltered ? (
+          <span className="text-primary-fixed"> Showing filtered view ({filteredView.filteredRows.length} rows).</span>
+        ) : null}
+        {!queryValid.ok ? (
+          <span className="text-error-fixed"> Fix the query below to apply filters — table shows the default scenario until then.</span>
+        ) : null}
       </p>
 
       {copyStatus ? (
@@ -163,12 +212,31 @@ export const Labs = () => {
             </div>
             <div className="p-4 bg-background/50 font-mono text-sm leading-relaxed text-on-surface">
               <div className="flex gap-3">
-                <span className="text-secondary-fixed opacity-70">&gt;</span>
-                <div spellCheck={false} className="outline-none w-full whitespace-pre-wrap">
-                  {scenario.query}
-                  <span className="blinking-cursor" />
-                </div>
+                <span className="text-secondary-fixed opacity-70 pt-1 shrink-0">&gt;</span>
+                <textarea
+                  value={queryText}
+                  onChange={(e) => onQueryChange(e.target.value)}
+                  spellCheck={false}
+                  rows={4}
+                  maxLength={2000}
+                  aria-label="SPL query input (client-side filter only)"
+                  aria-invalid={queryError ? true : undefined}
+                  className={cn(
+                    'outline-none w-full whitespace-pre-wrap bg-transparent resize-y min-h-[5rem] text-on-surface',
+                    'focus-visible:ring-1 focus-visible:ring-primary-fixed/50 rounded-sm',
+                    queryError && 'ring-1 ring-error-fixed/60'
+                  )}
+                />
               </div>
+              {queryError ? (
+                <p className="mt-2 text-[11px] text-error-fixed" role="alert">
+                  {queryError}
+                </p>
+              ) : (
+                <p className="mt-2 text-[10px] text-on-surface-variant/70">
+                  Type to filter the table live (client-side only). Blocked: SQL injection, script tags, shell exec.
+                </p>
+              )}
             </div>
           </div>
 
@@ -180,10 +248,12 @@ export const Labs = () => {
               </div>
               <div className="hidden sm:flex items-center gap-6 font-mono text-[10px]">
                 <span className="text-on-surface-variant">
-                  EVENTS: <span className="text-secondary-fixed">{metrics.totalEvents.toLocaleString()}</span>
+                  EVENTS:{' '}
+                  <span className="text-secondary-fixed">{filteredView.metrics.totalEvents.toLocaleString()}</span>
+                  {filteredView.isFiltered ? <span className="text-on-surface-variant/60"> (filtered)</span> : null}
                 </span>
                 <span className="text-on-surface-variant">
-                  TIME: <span className="text-on-surface">{metrics.queryTimeSec}s</span>
+                  TIME: <span className="text-on-surface">{filteredView.metrics.queryTimeSec}s</span>
                 </span>
                 <button
                   type="button"
@@ -207,7 +277,14 @@ export const Labs = () => {
                   </tr>
                 </thead>
                 <tbody className="text-on-surface-variant">
-                  {scenario.rows.map((log, i) => (
+                  {filteredView.filteredRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="py-8 text-center text-on-surface-variant">
+                        No rows match this query. Try broadening keywords (e.g. &quot;fail&quot;, an IP, or sourcetype).
+                      </td>
+                    </tr>
+                  ) : null}
+                  {filteredView.filteredRows.map((log, i) => (
                     <tr key={`${log.time}-${log.type}-${i}`} className="border-b border-outline-variant/10">
                       <td className="py-3 pr-4 text-on-surface/60 whitespace-nowrap">{log.time}</td>
                       <td className="py-3 pr-4">
@@ -236,7 +313,7 @@ export const Labs = () => {
                   AGGREGATED_RESULTS: stats count by src_ip
                 </div>
                 <div className="space-y-4">
-                  {metrics.aggregateBars.map((stat) => (
+                  {filteredView.metrics.aggregateBars.map((stat) => (
                     <div key={stat.ip} className="flex items-center gap-6">
                       <div className="w-32 font-bold text-primary-fixed">{stat.ip}</div>
                       <div className="w-16 text-right font-mono text-on-surface">{stat.count.toLocaleString()}</div>
@@ -288,10 +365,13 @@ export const Labs = () => {
                 <div className="mt-6">
                   <div className="flex justify-between text-[10px] text-on-surface-variant mb-1.5 uppercase font-bold">
                     <span>Narrative weight (from row mix)</span>
-                    <span>{metrics.narrativeWeight}%</span>
+                    <span>{filteredView.metrics.narrativeWeight}%</span>
                   </div>
                   <div className="h-1.5 bg-surface-variant rounded-full overflow-hidden">
-                    <div className="h-full bg-primary-fixed transition-all duration-500" style={{ width: `${metrics.narrativeWeight}%` }} />
+                    <div
+                      className="h-full bg-primary-fixed transition-all duration-500"
+                      style={{ width: `${filteredView.metrics.narrativeWeight}%` }}
+                    />
                   </div>
                 </div>
 
@@ -318,7 +398,10 @@ export const Labs = () => {
                 <button
                   key={i}
                   type="button"
-                  onClick={() => onCopyQuery(query)}
+                  onClick={() => {
+                    onCopyQuery(query);
+                    onQueryChange(query);
+                  }}
                   className="group w-full text-left font-mono text-[11px] border border-primary-fixed/20 p-3 bg-surface-variant/10 hover:bg-primary-fixed/10 hover:border-primary-fixed transition-all relative overflow-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-fixed"
                 >
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-fixed scale-y-0 group-hover:scale-y-100 transition-transform origin-top" aria-hidden />

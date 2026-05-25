@@ -23,6 +23,10 @@ export default defineConfig(({ mode }) => {
           target: contactProxy,
           changeOrigin: true,
         },
+        '/api/logs': {
+          target: contactProxy,
+          changeOrigin: true,
+        },
       },
     },
   };
