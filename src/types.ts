@@ -64,4 +64,8 @@ export interface LabScenario {
   rows: LabLogRow[];
   aggregates: LabAggregate[];
   toolboxQueries: string[];
+  /** SPL-style label shown above aggregate bars (per lab). */
+  aggregateLabel: string;
+  /** Short guidance for recruiters trying the sandbox. */
+  recruiterHint: string;
 }

@@ -5,7 +5,7 @@ export const labs: Lab[] = [
     id: 'LAB_01',
     title: 'Splunk Log Analysis',
     description:
-      'Advanced threat hunting using SPL queries. Correlating authentication logs to identify lateral movement patterns.',
+      'SSH brute-force hunt on linux_secure auth logs — correlate failed root logins and post-compromise session events with SPL.',
     category: 'SPLUNK_ENT_8.2',
     status: 'ACTIVE',
     difficulty: 'MEDIUM',
@@ -16,7 +16,7 @@ export const labs: Lab[] = [
     id: 'LAB_02',
     title: 'Wireshark Packet Sniffing',
     description:
-      'Deep packet inspection to analyze encrypted payloads and detect anomalous network traffic anomalies.',
+      'DNS beaconing lab — Zeek-style query logs from PCAP exports; spot high-volume lookups to a suspect domain.',
     category: 'NETWORK_ANALYSIS',
     status: 'ACTIVE',
     difficulty: 'HARD',
@@ -27,7 +27,7 @@ export const labs: Lab[] = [
     id: 'LAB_03',
     title: 'Metasploit Environments',
     description:
-      'Simulated exploit staging. Developing custom modules to test vulnerability resilience in isolated sandbox networks.',
+      'WAF + access_log triage after Metasploit staging — webshell upload blocks, PHP probe paths, and attacker IP correlation.',
     category: 'PENETRATION_TESTING',
     status: 'ACTIVE',
     difficulty: 'CRITICAL',

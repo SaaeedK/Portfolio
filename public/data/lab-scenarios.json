@@ -3,14 +3,16 @@
     "id": "LAB_01",
     "title": "Splunk Log Analysis",
     "headline": "Suspicious login spikes — SSH brute force",
-    "environmentLabel": "Portfolio dataset · Splunk-style",
-    "statusLabel": "Curated exercise (sample auth logs)",
+    "environmentLabel": "Splunk Enterprise · linux_secure auth",
+    "statusLabel": "Curated exercise (SSH / PAM auth logs)",
     "query": "index=main sourcetype=\"linux_secure\" action=\"failure\" user=\"root\"\n| stats count by src_ip\n| where count > 50\n| sort - count",
     "highlightIp": "192.168.1.105",
+    "aggregateLabel": "stats count by src_ip",
+    "recruiterHint": "Splunk hunt: correlate failed root logins, then widen with toolbox snippet 1 or hunt the successful break-in (snippet 3).",
     "threatSummary": [
-      { "label": "HIGHLIGHT_IP", "value": "192.168.1.105", "valClass": "text-primary-fixed" },
-      { "label": "SCENARIO", "value": "SSH brute force (auth correlation)", "valClass": "text-on-surface" },
-      { "label": "CONTEXT", "value": "linux_secure · root failures", "valClass": "text-secondary-fixed" }
+      { "label": "ATTACKER_IP", "value": "192.168.1.105", "valClass": "text-primary-fixed" },
+      { "label": "TTP", "value": "T1110.001 — password guessing (SSH)", "valClass": "text-on-surface" },
+      { "label": "DATA_SOURCE", "value": "/var/log/secure · sourcetype=linux_secure", "valClass": "text-secondary-fixed" }
     ],
     "rows": [
       {
@@ -58,26 +60,28 @@
     "id": "LAB_02",
     "title": "Wireshark Packet Sniffing",
     "headline": "DNS beaconing — unusual query volume",
-    "environmentLabel": "Portfolio dataset · Network SIEM",
-    "statusLabel": "Curated exercise (sample DNS logs)",
-    "query": "index=network sourcetype=dns query=\"*.update-check.example\"\n| stats count by src_ip, query\n| where count > 100\n| sort - count",
+    "environmentLabel": "Zeek DNS logs · Network SIEM index",
+    "statusLabel": "Curated exercise (DNS queries from PCAP export)",
+    "query": "index=network sourcetype=dns update-check.example\n| stats count by src_ip, query\n| where count > 100\n| sort - count",
     "highlightIp": "203.0.113.88",
+    "aggregateLabel": "stats count by src_ip, query",
+    "recruiterHint": "Wireshark-style DNS investigation: filter the beacon domain (default query), then compare with benign traffic (toolbox 1) or the SIEM threshold alert (toolbox 3).",
     "threatSummary": [
-      { "label": "HIGHLIGHT_IP", "value": "203.0.113.88", "valClass": "text-primary-fixed" },
-      { "label": "SCENARIO", "value": "DNS tunneling pattern (sample)", "valClass": "text-on-surface" },
-      { "label": "CONTEXT", "value": "High-entropy subdomains · PTR rare", "valClass": "text-secondary-fixed" }
+      { "label": "BEACON_HOST", "value": "203.0.113.88", "valClass": "text-primary-fixed" },
+      { "label": "TTP", "value": "T1071.004 — DNS C2 beaconing (sample)", "valClass": "text-on-surface" },
+      { "label": "INDICATOR", "value": "*.update-check.example · high QNAME entropy", "valClass": "text-secondary-fixed" }
     ],
     "rows": [
       {
         "time": "2024-10-27 16:11:02",
         "type": "dns_query",
-        "data": "QUERY a7f3b2.update-check.example from 203.0.113.88 — NOERROR",
+        "data": "Frame 1842 | UDP 52441 → 53 | QRY A? a7f3b2.update-check.example | Client 203.0.113.88 — NOERROR",
         "severity": "info"
       },
       {
         "time": "2024-10-27 16:11:04",
         "type": "dns_query",
-        "data": "QUERY 9c1d4e.update-check.example from 203.0.113.88 — NOERROR",
+        "data": "Frame 1844 | UDP 52441 → 53 | QRY A? 9c1d4e.update-check.example | Client 203.0.113.88 — NOERROR",
         "severity": "info"
       },
       {
@@ -87,9 +91,15 @@
         "severity": "error"
       },
       {
+        "time": "2024-10-27 16:11:07",
+        "type": "dns_response",
+        "data": "Frame 1846 | UDP 53 → 52441 | ANSWER A 203.0.113.88 | TTL 300 for a7f3b2.update-check.example",
+        "severity": "info"
+      },
+      {
         "time": "2024-10-27 16:11:09",
         "type": "dns_query",
-        "data": "QUERY www.google.com from 10.0.0.12 — NOERROR",
+        "data": "Frame 1850 | UDP 44102 → 53 | QRY A? www.google.com | Client 10.0.0.12 — NOERROR",
         "severity": "info"
       }
     ],
@@ -99,7 +109,7 @@
     ],
     "toolboxQueries": [
       "index=network sourcetype=dns",
-      "| stats count by src_ip, query | sort - count",
+      "| stats count by src_ip | sort - count",
       "index=network \"Threshold exceeded\""
     ]
   },
@@ -107,20 +117,28 @@
     "id": "LAB_03",
     "title": "Metasploit Environments",
     "headline": "Web shell upload attempt — WAF + access logs",
-    "environmentLabel": "Portfolio dataset · AppSec",
-    "statusLabel": "Curated exercise (sample HTTP/WAF)",
-    "query": "index=web sourcetype=access_log status=200 uri=\"*/shell.php\"\n| stats count by src_ip, uri\n| sort - count",
+    "environmentLabel": "Isolated range · WAF + HTTP access_log",
+    "statusLabel": "Curated exercise (Metasploit staging / upload probes)",
+    "query": "index=web sourcetype=access_log src_ip=198.51.100.17\n| stats count by src_ip, uri\n| sort - count",
     "highlightIp": "198.51.100.17",
+    "aggregateLabel": "stats count by src_ip, uri",
+    "recruiterHint": "AppSec / pentest lab: default query isolates the staging host. Use toolbox 1 for blocks only, or toolbox 3 for the WAF webshell rule hit.",
     "threatSummary": [
-      { "label": "HIGHLIGHT_IP", "value": "198.51.100.17", "valClass": "text-primary-fixed" },
-      { "label": "SCENARIO", "value": "Exploit staging / upload probe", "valClass": "text-on-surface" },
-      { "label": "CONTEXT", "value": "Sandbox · no production systems", "valClass": "text-secondary-fixed" }
+      { "label": "STAGING_IP", "value": "198.51.100.17", "valClass": "text-primary-fixed" },
+      { "label": "TTP", "value": "T1505.003 — web shell (blocked upload)", "valClass": "text-on-surface" },
+      { "label": "TOOLING", "value": "Metasploit multi/handler · sandbox only", "valClass": "text-secondary-fixed" }
     ],
     "rows": [
       {
         "time": "2024-10-27 18:44:01",
         "type": "waf_block",
-        "data": "BLOCK 198.51.100.17 POST /upload.php — rule: webshell_signature",
+        "data": "BLOCK 198.51.100.17 POST /upload.php — rule: webshell_signature — body matched shell.php",
+        "severity": "error"
+      },
+      {
+        "time": "2024-10-27 18:44:02",
+        "type": "msf_probe",
+        "data": "198.51.100.17 POST /shell.php HTTP/1.1 — User-Agent: Metasploit Framework — 404",
         "severity": "error"
       },
       {
@@ -148,7 +166,7 @@
     ],
     "toolboxQueries": [
       "index=web sourcetype=access_log status>=400",
-      "| stats count by src_ip, uri | sort - count",
+      "| stats count by src_ip | sort - count",
       "index=web \"webshell_signature\""
     ]
   }

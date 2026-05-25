@@ -18,7 +18,7 @@ import { copyText } from '@/lib/clipboard';
 import { computeLabMetrics, highlightTokenInText, rowSeverityClass } from '@/lib/labScenario';
 import { useLabScenario } from '@/hooks/useLabScenario';
 import { validateSecureQueryInput } from '@/lib/secureInput';
-import { aggregatesFromRows, filterLabRows } from '@/lib/splQuery';
+import { aggregatesFromRows, filterLabRows, isLabQueryFiltered } from '@/lib/splQuery';
 import { motion } from 'motion/react';
 import { labs } from '@/data/portfolio';
 
@@ -35,18 +35,25 @@ export const Labs = () => {
 
   const filteredView = useMemo(() => {
     if (!scenario) return null;
-    const activeQuery = queryValid.ok ? queryValid.value : scenario.query;
+    if (!queryValid.ok) {
+      return {
+        filteredRows: [] as typeof scenario.rows,
+        aggregates: [] as typeof scenario.aggregates,
+        metrics: computeLabMetrics(scenario, { rows: [], aggregates: [], useFilteredTotals: true }),
+        isFiltered: false,
+        queryBlocked: true,
+      };
+    }
+    const activeQuery = queryValid.value;
     const filteredRows = filterLabRows(scenario.rows, activeQuery);
-    const isFiltered =
-      queryValid.ok &&
-      (activeQuery.trim() !== scenario.query.trim() || filteredRows.length !== scenario.rows.length);
+    const isFiltered = isLabQueryFiltered(scenario.rows, activeQuery, scenario.query);
     const aggregates = isFiltered ? aggregatesFromRows(filteredRows) : scenario.aggregates;
     const metrics = computeLabMetrics(scenario, {
       rows: filteredRows,
       aggregates,
       useFilteredTotals: isFiltered,
     });
-    return { filteredRows, aggregates, metrics, isFiltered, queryApplied: queryValid.ok };
+    return { filteredRows, aggregates, metrics, isFiltered, queryBlocked: false };
   }, [scenario, queryValid]);
 
   useEffect(() => {
@@ -132,12 +139,13 @@ export const Labs = () => {
       <p className="font-mono text-[11px] text-on-surface-variant border border-outline-variant/40 rounded px-3 py-2 bg-surface-variant/20 max-w-3xl">
         Scenario rows load from <code className="text-primary-fixed">/data/lab-scenarios.json</code>. Edit the SPL box to
         filter results in your browser only — queries are validated and never sent to Splunk or SQL backends.
-        {filteredView.isFiltered ? (
+        {filteredView.queryBlocked ? (
+          <span className="text-error-fixed"> Query blocked — results withheld until input is safe.</span>
+        ) : filteredView.isFiltered ? (
           <span className="text-primary-fixed"> Showing filtered view ({filteredView.filteredRows.length} rows).</span>
-        ) : null}
-        {!queryValid.ok ? (
-          <span className="text-error-fixed"> Fix the query below to apply filters — table shows the default scenario until then.</span>
-        ) : null}
+        ) : (
+          <span className="text-on-surface-variant/80"> Showing full curated dataset ({filteredView.filteredRows.length} rows).</span>
+        )}
       </p>
 
       {copyStatus ? (
@@ -184,6 +192,7 @@ export const Labs = () => {
           </div>
           <h1 className="text-2xl md:text-4xl font-bold text-primary tracking-tight">{scenario.headline}</h1>
           <p className="font-mono text-xs text-on-surface-variant mt-2">{scenario.title}</p>
+          <p className="font-mono text-[11px] text-on-surface-variant/90 mt-3 max-w-2xl leading-relaxed">{scenario.recruiterHint}</p>
         </div>
         <div className="flex items-center gap-4 w-full md:w-auto">
           <button
@@ -229,12 +238,13 @@ export const Labs = () => {
                 />
               </div>
               {queryError ? (
-                <p className="mt-2 text-[11px] text-error-fixed" role="alert">
-                  {queryError}
+                <p className="mt-2 text-[11px] text-error-fixed font-bold" role="alert">
+                  {queryError} Results are withheld until the query is safe.
                 </p>
               ) : (
                 <p className="mt-2 text-[10px] text-on-surface-variant/70">
-                  Type to filter the table live (client-side only). Blocked: SQL injection, script tags, shell exec.
+                  Client-side Splunk-style filter only (no backend). Use toolbox snippets for expected results. Blocked:
+                  injection, scripts, shell/SQL exec, path traversal.
                 </p>
               )}
             </div>
@@ -249,8 +259,14 @@ export const Labs = () => {
               <div className="hidden sm:flex items-center gap-6 font-mono text-[10px]">
                 <span className="text-on-surface-variant">
                   EVENTS:{' '}
-                  <span className="text-secondary-fixed">{filteredView.metrics.totalEvents.toLocaleString()}</span>
-                  {filteredView.isFiltered ? <span className="text-on-surface-variant/60"> (filtered)</span> : null}
+                  <span className={cn('text-secondary-fixed', filteredView.queryBlocked && 'text-error-fixed')}>
+                    {filteredView.metrics.totalEvents.toLocaleString()}
+                  </span>
+                  {filteredView.queryBlocked ? (
+                    <span className="text-error-fixed"> (blocked)</span>
+                  ) : filteredView.isFiltered ? (
+                    <span className="text-on-surface-variant/60"> (filtered)</span>
+                  ) : null}
                 </span>
                 <span className="text-on-surface-variant">
                   TIME: <span className="text-on-surface">{filteredView.metrics.queryTimeSec}s</span>
@@ -280,7 +296,9 @@ export const Labs = () => {
                   {filteredView.filteredRows.length === 0 ? (
                     <tr>
                       <td colSpan={3} className="py-8 text-center text-on-surface-variant">
-                        No rows match this query. Try broadening keywords (e.g. &quot;fail&quot;, an IP, or sourcetype).
+                        {filteredView.queryBlocked
+                          ? 'Query blocked for security. Remove disallowed patterns or use a toolbox snippet.'
+                          : 'No rows match this query. Try a toolbox snippet or broaden keywords (e.g. fail, an IP, or sourcetype).'}
                       </td>
                     </tr>
                   ) : null}
@@ -310,9 +328,12 @@ export const Labs = () => {
               <div className="mt-10 pt-6 border-t border-primary-fixed/20">
                 <div className="text-primary-fixed mb-4 font-bold flex items-center gap-2">
                   <span className="text-secondary-fixed">&gt;&gt;</span>
-                  AGGREGATED_RESULTS: stats count by src_ip
+                  AGGREGATED_RESULTS: {scenario.aggregateLabel}
                 </div>
                 <div className="space-y-4">
+                  {filteredView.queryBlocked ? (
+                    <p className="text-[11px] text-error-fixed">Aggregations withheld — query failed security validation.</p>
+                  ) : null}
                   {filteredView.metrics.aggregateBars.map((stat) => (
                     <div key={stat.ip} className="flex items-center gap-6">
                       <div className="w-32 font-bold text-primary-fixed">{stat.ip}</div>
@@ -416,15 +437,30 @@ export const Labs = () => {
 
               <div className="mt-8 pt-6 border-t border-outline-variant/10">
                 <h3 className="font-mono text-[10px] text-on-surface-variant mb-3 uppercase tracking-widest font-bold">Reference_Materials</h3>
-                <a
-                  href="https://docs.splunk.com/Documentation/Splunk/latest/SearchReference/Whatsinthismanual"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 text-xs text-primary-fixed hover:underline group"
-                >
-                  <BookOpen size={16} aria-hidden />
-                  <span>Splunk SPL reference (official)</span>
-                </a>
+                <ul className="flex flex-col gap-3">
+                  <li>
+                    <a
+                      href="https://docs.splunk.com/Documentation/Splunk/latest/SearchReference/Whatsinthismanual"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 text-xs text-primary-fixed hover:underline group"
+                    >
+                      <BookOpen size={16} aria-hidden />
+                      <span>Splunk SPL Search Reference (Splunk Docs)</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="https://techdocs.broadcom.com/us/en/carbon-black/cloud/carbon-black-cloud/index/cbc-user-guide-tile/GUID-0B8E651F-7616-4D61-811F-F03D931C2A85-en/GUID-D3DE47C3-80B9-4962-ADD6-C897E2B69CEA-en/GUID-77E939E7-0130-42B9-A33A-2CBABE39F93B-en/GUID-EDA4B746-7731-4EBF-8AEE-207385B16A5E-en.html"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 text-xs text-primary-fixed hover:underline group"
+                    >
+                      <BookOpen size={16} aria-hidden />
+                      <span>Lookup files &amp; acceleration in Splunk SIEM (Broadcom)</span>
+                    </a>
+                  </li>
+                </ul>
               </div>
             </div>
           </section>

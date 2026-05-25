@@ -43,7 +43,7 @@ export function computeLabMetrics(
 }
 
 export function rowSeverityClass(row: LabLogRow): string {
-  if (row.severity === 'error') {
+  if (row.severity === 'error' || row.type === 'msf_probe' || row.type === 'dns_alert') {
     return 'bg-error-fixed/10 text-error-fixed border-error-fixed/30';
   }
   if (row.severity === 'success') {
