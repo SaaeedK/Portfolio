@@ -214,19 +214,125 @@ export function filterLabRows(rows: LabLogRow[], query: string): LabLogRow[] {
   return rows.filter((row) => rowMatchesConstraints(row, constraints));
 }
 
-export function aggregatesFromRows(rows: LabLogRow[]): LabAggregate[] {
+const COMPOSITE_SEP = ' · ';
+
+/** Fields from `| stats count by src_ip, query` (pipeline segment only). */
+export function parseStatsGroupBy(query: string): string[] {
+  const m = query.match(/\|\s*stats\s+count\s+by\s+([\w\s,]+?)(?:\s*\||\s*$)/i);
+  if (!m) return ['src_ip'];
+  const fields = m[1].split(',').map((f) => f.trim().toLowerCase()).filter(Boolean);
+  return fields.length ? fields : ['src_ip'];
+}
+
+/** Lab-default dimensions from aggregateLabel or scenario id. */
+export function groupByFieldsForLab(labId: string, query?: string, aggregateLabel?: string): string[] {
+  if (query && hasStatsCountPipeline(query)) {
+    const parsed = parseStatsGroupBy(query);
+    if (parsed.length) return parsed;
+  }
+  if (aggregateLabel) {
+    const m = aggregateLabel.match(/count\s+by\s+(.+)$/i);
+    if (m) {
+      const fields = m[1].split(',').map((f) => f.trim().toLowerCase()).filter(Boolean);
+      if (fields.length) return fields;
+    }
+  }
+  const defaults: Record<string, string[]> = {
+    LAB_01: ['src_ip'],
+    LAB_02: ['src_ip', 'query'],
+    LAB_03: ['src_ip', 'uri'],
+  };
+  return defaults[labId] ?? ['src_ip'];
+}
+
+function extractSrcIp(data: string): string | null {
+  const client = data.match(/\bClient\s+((?:\d{1,3}\.){3}\d{1,3})\b/i);
+  if (client) return client[1];
+  const ips = data.match(IPV4) ?? [];
+  return ips[0] ?? null;
+}
+
+function extractQueryDimension(data: string): string {
+  const qry = data.match(/QRY\s+\S+\s+\S*\??\s*([\w.*-]+\.[a-z][\w.-]*)/i);
+  if (qry) return qry[1].toLowerCase();
+  const hay = data.toLowerCase();
+  if (hay.includes('threshold exceeded') && hay.includes('update-check')) return '*.update-check.example';
+  if (hay.includes('www.google.com')) return 'www.google.com';
+  const domain = data.match(/\b([a-z0-9][-a-z0-9]*\.[a-z][-a-z0-9.]+)\b/i);
+  if (domain && !/^\d/.test(domain[1])) return domain[1].toLowerCase();
+  return '(unknown)';
+}
+
+function extractUriDimension(data: string): string {
+  const verb = data.match(/\b(?:GET|POST|BLOCK|ALLOW)\s+(\/[^\s—]+)/i);
+  if (verb) return verb[1];
+  const path = data.match(/\s(\/[a-zA-Z0-9_./-]+)/);
+  return path?.[1] ?? '(unknown)';
+}
+
+function buildAggregateKey(row: LabLogRow, fields: string[]): string {
+  const parts: string[] = [];
+  for (const f of fields) {
+    if (f === 'src_ip') parts.push(extractSrcIp(row.data) ?? 'unknown');
+    else if (f === 'query') parts.push(extractQueryDimension(row.data));
+    else if (f === 'uri') parts.push(extractUriDimension(row.data));
+    else parts.push(f);
+  }
+  if (fields.length === 1 && fields[0] === 'src_ip') return parts[0] ?? 'unknown';
+  return parts.join(COMPOSITE_SEP);
+}
+
+export function aggregatesFromRowsByFields(rows: LabLogRow[], fields: string[]): LabAggregate[] {
   const counts = new Map<string, number>();
   for (const row of rows) {
-    const ips = row.data.match(IPV4) ?? [];
-    for (const ip of ips) {
-      counts.set(ip, (counts.get(ip) ?? 0) + 1);
-    }
+    const key = buildAggregateKey(row, fields);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
   }
   return [...counts.entries()]
     .map(([ip, count]) => ({ ip, count }))
     .sort((a, b) => b.count - a.count);
 }
 
+/** IP-only grouping (LAB_01 default). */
+export function aggregatesFromRows(rows: LabLogRow[]): LabAggregate[] {
+  return aggregatesFromRowsByFields(rows, ['src_ip']);
+}
+
 export function isLabQueryFiltered(rows: LabLogRow[], query: string): boolean {
   return filterLabRows(rows, query).length !== rows.length;
+}
+
+/** True when query includes a Splunk-style `| stats count by …` stage (client-side over visible rows). */
+export function hasStatsCountPipeline(query: string): boolean {
+  return /\|\s*stats\s+count\s+by\s+/i.test(query);
+}
+
+export type LabAggregateSource = 'sample' | 'filtered' | 'stats';
+
+/** Pick aggregate bars: fictional SIEM totals, filtered counts, or stats pipeline on visible rows. */
+export function resolveLabAggregates(
+  rows: LabLogRow[],
+  query: string,
+  scenarioAggregates: LabAggregate[],
+  labId: string,
+  aggregateLabel?: string,
+): { aggregates: LabAggregate[]; source: LabAggregateSource } {
+  const filtered = filterLabRows(rows, query);
+  const fields = groupByFieldsForLab(labId, query, aggregateLabel);
+  if (hasStatsCountPipeline(query)) {
+    return { aggregates: aggregatesFromRowsByFields(filtered, fields), source: 'stats' };
+  }
+  if (isLabQueryFiltered(rows, query)) {
+    return { aggregates: aggregatesFromRowsByFields(filtered, fields), source: 'filtered' };
+  }
+  return { aggregates: scenarioAggregates, source: 'sample' };
+}
+
+/** `| stats count by` fields must match tokens in the scenario aggregateLabel. */
+export function statsGroupByMatchesLabel(query: string, aggregateLabel: string): boolean {
+  if (!hasStatsCountPipeline(query)) return true;
+  const queryFields = parseStatsGroupBy(query);
+  const m = aggregateLabel.match(/count\s+by\s+(.+)$/i);
+  const labelFields = m ? m[1].split(',').map((f) => f.trim().toLowerCase()).filter(Boolean) : [];
+  return queryFields.length === labelFields.length && queryFields.every((f, i) => f === labelFields[i]);
 }

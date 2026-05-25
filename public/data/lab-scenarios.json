@@ -109,7 +109,7 @@
     ],
     "toolboxQueries": [
       "index=network sourcetype=dns update-check.example",
-      "| stats count by src_ip | sort - count",
+      "| stats count by src_ip, query | sort - count",
       "index=network \"Threshold exceeded\""
     ]
   },
@@ -122,7 +122,7 @@
     "query": "index=web sourcetype=access_log",
     "highlightIp": "198.51.100.17",
     "aggregateLabel": "stats count by src_ip, uri",
-    "recruiterHint": "AppSec / pentest lab: default query shows the full access_log slice. Use toolbox 1 to isolate the staging host, 2 for HTTP errors only, or 3 for the WAF webshell rule hit (~18:44 UTC).",
+    "recruiterHint": "AppSec / pentest lab: default query shows the full access_log slice. Toolbox: (1) staging host, (2) stats by src_ip+uri, (3) WAF webshell rule, (4) HTTP errors — ~18:44 UTC.",
     "threatSummary": [
       { "label": "STAGING_IP", "value": "198.51.100.17", "valClass": "text-primary-fixed" },
       { "label": "TTP", "value": "T1505.003 — web shell (blocked upload)", "valClass": "text-on-surface" },
@@ -166,8 +166,9 @@
     ],
     "toolboxQueries": [
       "index=web sourcetype=access_log src_ip=198.51.100.17",
-      "index=web sourcetype=access_log status>=400",
-      "index=web \"webshell_signature\""
+      "| stats count by src_ip, uri | sort - count",
+      "index=web \"webshell_signature\"",
+      "index=web sourcetype=access_log status>=400"
     ]
   }
 ]

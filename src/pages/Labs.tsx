@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -23,8 +23,8 @@ import {
   sortLabRowsByTime,
 } from '@/lib/labScenario';
 import { useLabScenario } from '@/hooks/useLabScenario';
-import { validateSecureQueryInput } from '@/lib/secureInput';
-import { aggregatesFromRows, filterLabRows, isLabQueryFiltered } from '@/lib/splQuery';
+import { MAX_QUERY_LEN, validateSecureQueryInput } from '@/lib/secureInput';
+import { filterLabRows, isLabQueryFiltered, resolveLabAggregates } from '@/lib/splQuery';
 import { motion } from 'motion/react';
 import { labs } from '@/data/portfolio';
 
@@ -35,6 +35,13 @@ export const Labs = () => {
   /** Per-lab SPL drafts so switching tabs never filters rows with another lab's query. */
   const [queryByLab, setQueryByLab] = useState<Record<string, string>>({});
   const [queryError, setQueryError] = useState('');
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
 
   const labMeta = useMemo(() => labs.find((l) => l.id === labId), [labId]);
 
@@ -51,14 +58,21 @@ export const Labs = () => {
         metrics: computeLabMetrics(scenario, { rows: [], aggregates: [] }),
         isFiltered: false,
         queryBlocked: true,
+        aggregateSource: 'sample' as const,
       };
     }
     const activeQuery = queryValid.value;
     const filteredRows = sortLabRowsByTime(filterLabRows(scenario.rows, activeQuery));
     const isFiltered = isLabQueryFiltered(scenario.rows, activeQuery);
-    const aggregates = isFiltered ? aggregatesFromRows(filteredRows) : scenario.aggregates;
+    const { aggregates, source: aggregateSource } = resolveLabAggregates(
+      scenario.rows,
+      activeQuery,
+      scenario.aggregates,
+      scenario.id,
+      scenario.aggregateLabel,
+    );
     const metrics = computeLabMetrics(scenario, { rows: filteredRows, aggregates });
-    return { filteredRows, aggregates, metrics, isFiltered, queryBlocked: false };
+    return { filteredRows, aggregates, metrics, isFiltered, aggregateSource, queryBlocked: false };
   }, [scenario, queryValid]);
 
   const onQueryChange = (value: string) => {
@@ -71,7 +85,16 @@ export const Labs = () => {
   const onCopyQuery = async (query: string) => {
     const ok = await copyText(query);
     setCopyStatus(ok ? 'Query copied to clipboard.' : 'Could not copy — select and copy manually.');
-    window.setTimeout(() => setCopyStatus(''), 3000);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = window.setTimeout(() => {
+      setCopyStatus('');
+      copyTimerRef.current = null;
+    }, 3000);
+  };
+
+  const onApplyToolboxSnippet = (query: string) => {
+    onQueryChange(query);
+    void onCopyQuery(query);
   };
 
   const onExportJson = () => {
@@ -241,11 +264,11 @@ export const Labs = () => {
                   onChange={(e) => onQueryChange(e.target.value)}
                   spellCheck={false}
                   rows={4}
-                  maxLength={2000}
-                  aria-label="SPL query input (client-side filter only)"
+                  maxLength={MAX_QUERY_LEN}
+                  aria-label="SPL query input"
                   aria-invalid={queryError ? true : undefined}
                   className={cn(
-                    'outline-none w-full whitespace-pre-wrap bg-transparent resize-y min-h-[5rem] text-on-surface',
+                    'outline-none w-full whitespace-pre-wrap bg-transparent resize-y min-h-20 text-on-surface',
                     'focus-visible:ring-1 focus-visible:ring-primary-fixed/50 rounded-sm',
                     queryError && 'ring-1 ring-error-fixed/60'
                   )}
@@ -257,8 +280,9 @@ export const Labs = () => {
                 </p>
               ) : (
                 <p className="mt-2 text-[10px] text-on-surface-variant/70">
-                  Client-side Splunk-style filter only (no backend). Use toolbox snippets for expected results. Blocked:
-                  injection, scripts, shell/SQL exec, path traversal.
+                  Search head filters rows; pipelines use{' '}
+                  <code className="text-primary-fixed/90">{scenario.aggregateLabel}</code>. Snippets live in the{' '}
+                  {scenario.id} toolbox.
                 </p>
               )}
             </div>
@@ -268,7 +292,15 @@ export const Labs = () => {
             <div className="border-b border-primary-fixed/20 px-6 py-4 flex justify-between items-center bg-surface-variant/20">
               <div className="flex items-center gap-4">
                 <Terminal size={18} className="text-primary-fixed" aria-hidden />
-                <h2 className="font-mono text-xs font-bold text-primary-fixed tracking-widest uppercase">RAW_LOG_STREAM // RESULTS</h2>
+                <div>
+                  <h2 className="font-mono text-xs font-bold text-primary-fixed tracking-widest uppercase">
+                    RAW_LOG_STREAM // RESULTS
+                  </h2>
+                  <p className="mt-1 text-[10px] text-on-surface-variant/80 max-w-xl">
+                    Sample table: {scenario.rows.length} curated events (fixed 2024-10-27 UTC). EVENTS counts visible rows
+                    only — not SIEM index volume.
+                  </p>
+                </div>
               </div>
               <div className="flex flex-wrap items-center gap-x-6 gap-y-1 font-mono text-[10px]">
                 <span className="text-on-surface-variant">
@@ -347,17 +379,63 @@ export const Labs = () => {
               </table>
 
               <div className="mt-10 pt-6 border-t border-primary-fixed/20">
-                <div className="text-primary-fixed mb-4 font-bold flex items-center gap-2">
+                <div className="text-primary-fixed mb-2 font-bold flex flex-wrap items-center gap-2">
                   <span className="text-secondary-fixed">&gt;&gt;</span>
-                  AGGREGATED_RESULTS: {scenario.aggregateLabel}
+                  <span>AGGREGATED_RESULTS: {scenario.aggregateLabel}</span>
+                  {!filteredView.queryBlocked ? (
+                    <span
+                      className={cn(
+                        'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border',
+                        filteredView.aggregateSource === 'sample'
+                          ? 'text-on-surface-variant border-outline-variant/50 bg-surface-variant/30'
+                          : 'text-secondary-fixed border-secondary-fixed/40 bg-secondary-fixed/10',
+                      )}
+                      title={
+                        filteredView.aggregateSource === 'sample'
+                          ? 'Pre-baked fictional SIEM totals for the exercise narrative'
+                          : filteredView.aggregateSource === 'stats'
+                            ? 'Counts derived from visible rows via | stats count by (client-side)'
+                            : 'Counts derived from IPv4s in currently visible rows'
+                      }
+                    >
+                      {filteredView.aggregateSource === 'sample'
+                        ? 'fictional SIEM scale'
+                        : filteredView.aggregateSource === 'stats'
+                          ? 'stats · visible sample'
+                          : 'filtered · visible sample'}
+                    </span>
+                  ) : null}
                 </div>
+                {filteredView.aggregateSource === 'sample' && !filteredView.queryBlocked ? (
+                  <p className="text-[10px] text-on-surface-variant/70 mb-4 max-w-2xl">
+                    Bar totals (e.g. {scenario.aggregates[0]?.count.toLocaleString()}) are narrative SIEM volume, not a sum
+                    of the {scenario.rows.length} rows above. Filter the table or run this lab&apos;s toolbox{' '}
+                    <code className="text-primary-fixed/90">{scenario.aggregateLabel}</code> snippet to align bars with
+                    visible events.
+                  </p>
+                ) : null}
+                {filteredView.aggregateSource === 'stats' && !filteredView.queryBlocked ? (
+                  <p className="text-[10px] text-on-surface-variant/70 mb-4 max-w-2xl">
+                    {scenario.aggregateLabel} on {filteredView.filteredRows.length} visible row(s).
+                  </p>
+                ) : null}
+                {filteredView.aggregateSource === 'filtered' && !filteredView.queryBlocked ? (
+                  <p className="text-[10px] text-on-surface-variant/70 mb-4 max-w-2xl">
+                    Counts from visible rows ({scenario.aggregateLabel}).
+                  </p>
+                ) : null}
                 <div className="space-y-4">
                   {filteredView.queryBlocked ? (
                     <p className="text-[11px] text-error-fixed">Aggregations withheld — query failed security validation.</p>
                   ) : null}
                   {filteredView.metrics.aggregateBars.map((stat) => (
                     <div key={stat.ip} className="flex items-center gap-6">
-                      <div className="w-32 font-bold text-primary-fixed">{stat.ip}</div>
+                      <div
+                        className="min-w-32 max-w-56 shrink-0 font-bold text-primary-fixed break-all text-[10px] sm:text-xs"
+                        title={stat.ip}
+                      >
+                        {stat.ip}
+                      </div>
                       <div className="w-16 text-right font-mono text-on-surface">{stat.count.toLocaleString()}</div>
                       <div className="flex-1 h-1.5 bg-surface-variant/30 rounded-full overflow-hidden">
                         <motion.div
@@ -430,24 +508,42 @@ export const Labs = () => {
             </div>
           </section>
 
-          <section className="bento-card p-6">
-            <h2 className="font-mono text-xs font-bold text-primary-fixed flex items-center gap-3 mb-6 border-b border-primary-fixed/10 pb-4 uppercase">
-              <Wrench size={18} aria-hidden /> SIEM_QUERIES_TOOLBOX
-            </h2>
+          <section className="bento-card p-6" aria-labelledby={`toolbox-heading-${scenario.id}`}>
+            <div className="flex flex-wrap items-center gap-2 mb-2 border-b border-primary-fixed/10 pb-4">
+              <h2
+                id={`toolbox-heading-${scenario.id}`}
+                className="font-mono text-xs font-bold text-primary-fixed flex items-center gap-3 uppercase"
+              >
+                <Wrench size={18} aria-hidden /> SIEM_QUERIES_TOOLBOX
+              </h2>
+              <span className="bg-surface-variant text-on-surface-variant px-2 py-0.5 rounded text-[10px] font-bold border border-outline-variant">
+                {scenario.id}
+              </span>
+            </div>
+            <p className="text-[11px] text-on-surface-variant mb-1 line-clamp-2">{scenario.title}</p>
             <div className="flex flex-col gap-3">
-              <p className="text-[11px] text-on-surface-variant mb-2">Click a snippet to copy to clipboard:</p>
+              <p className="text-[11px] text-on-surface-variant mb-2">
+                Snippets for {scenario.id} only — click to apply. Default slice:{' '}
+                <code className="text-primary-fixed/90 break-all">{scenario.query}</code>
+              </p>
               {scenario.toolboxQueries.map((query, i) => (
                 <button
-                  key={i}
+                  key={`${scenario.id}-toolbox-${i}`}
                   type="button"
-                  onClick={() => {
-                    onCopyQuery(query);
-                    onQueryChange(query);
-                  }}
-                  className="group w-full text-left font-mono text-[11px] border border-primary-fixed/20 p-3 bg-surface-variant/10 hover:bg-primary-fixed/10 hover:border-primary-fixed transition-all relative overflow-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-fixed"
+                  title={query}
+                  aria-label={`Snippet ${i + 1} for ${scenario.id}: apply query`}
+                  onClick={() => onApplyToolboxSnippet(query)}
+                  className="group w-full text-left font-mono text-[11px] border border-primary-fixed/20 p-3 bg-surface-variant/10 hover:bg-primary-fixed/10 hover:border-primary-fixed transition-all relative focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-fixed"
                 >
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-fixed scale-y-0 group-hover:scale-y-100 transition-transform origin-top" aria-hidden />
-                  <div className="text-on-surface truncate pr-6 group-hover:text-primary-fixed transition-colors italic">{query}</div>
+                  <div className="flex items-start gap-2 pr-6">
+                    <span className="text-[9px] text-on-surface-variant/80 uppercase shrink-0 pt-0.5">
+                      Snippet {i + 1}
+                    </span>
+                    <span className="text-on-surface truncate group-hover:text-primary-fixed transition-colors italic min-w-0 flex-1">
+                      {query}
+                    </span>
+                  </div>
                   <ArrowRight
                     size={14}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-primary-fixed opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0"

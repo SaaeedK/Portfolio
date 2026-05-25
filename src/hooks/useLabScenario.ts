@@ -22,8 +22,12 @@ export function useLabScenario() {
   }, []);
 
   useEffect(() => {
-    if (load.status !== 'ready' || labId) return;
-    setSearchParams({ lab: load.scenarios[0]!.id }, { replace: true });
+    if (load.status !== 'ready') return;
+    const ids = load.scenarios.map((s) => s.id);
+    const fallback = ids[0]!;
+    if (!labId || !ids.includes(labId)) {
+      setSearchParams({ lab: fallback }, { replace: true });
+    }
   }, [load, labId, setSearchParams]);
 
   const scenario = useMemo(() => {

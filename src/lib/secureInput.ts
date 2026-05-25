@@ -1,4 +1,4 @@
-const MAX_QUERY_LEN = 2000;
+export const MAX_QUERY_LEN = 2000;
 const MAX_TERMINAL_LEN = 256;
 
 /** Patterns that must never be accepted in user-editable query/terminal fields (portfolio sandbox). */

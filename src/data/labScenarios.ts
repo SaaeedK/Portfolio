@@ -2,7 +2,7 @@ import scenariosJson from './lab-scenarios.json';
 import type { LabScenario } from '@/types';
 
 /** Bump when row data changes — shown on /labs so you can confirm the bundle reloaded. */
-export const LAB_DATA_REVISION = '2026-05-25.1';
+export const LAB_DATA_REVISION = '2026-05-25.5';
 
 function parseLabScenarios(data: unknown): LabScenario[] {
   if (!Array.isArray(data) || data.length === 0) {
