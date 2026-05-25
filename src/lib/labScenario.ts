@@ -1,3 +1,4 @@
+/** Lab scenario helpers: time formatting, metrics, IP highlight, and scenario lookup. */
 import type { LabAggregate, LabLogRow, LabScenario } from '@/types';
 
 export interface LabAggregateBar extends LabAggregate {

@@ -1,3 +1,4 @@
+/** Shown while a lazy route chunk loads. */
 import { Loader2 } from 'lucide-react';
 
 export const RouteFallback = () => (

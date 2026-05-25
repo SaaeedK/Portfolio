@@ -2,10 +2,17 @@ node_modules/
 build/
 dist/
 coverage/
-# Generated at build (scripts/sync-github-commits.mjs); do not commit stale cache
+.wrangler/
+.vite/
+
+# Generated at build / predev (scripts/sync-github-commits.mjs); do not commit stale cache
 public/data/github-commits.json
+
 .DS_Store
+Thumbs.db
 *.log
+*.tsbuildinfo
+
 .env*
 !.env.example
 .dev.vars

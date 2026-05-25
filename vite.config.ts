@@ -1,3 +1,7 @@
+/**
+ * Vite + React + Tailwind. Dev server proxies /api/* to wrangler pages dev
+ * (VITE_DEV_CONTACT_API_PROXY, default http://127.0.0.1:8788).
+ */
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -32,8 +36,6 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modify—file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
       proxy: {
         '/api/contact': {

@@ -1,14 +1,31 @@
-import { useState } from 'react';
+/** Responsive header: brand, mobile drawer, résumé and external profile links. */
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Terminal, ExternalLink, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { focusRing } from '@/lib/a11y';
 import { primaryNav } from '@/config/navigation';
 import { site, getResumeHref } from '@/data/site';
 
 export const TopNav = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const resumeHref = getResumeHref();
+
+  const closeMenu = useCallback(() => {
+    setIsMenuOpen(false);
+    menuButtonRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeMenu();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isMenuOpen, closeMenu]);
 
   return (
     <header className="fixed top-0 w-full z-50 border-b border-primary-fixed/20 bg-background/70 backdrop-blur-xl shadow-[0_0_15px_rgba(0,251,251,0.1)]">
@@ -52,8 +69,9 @@ export const TopNav = () => {
             Résumé
           </a>
           <button
+            ref={menuButtonRef}
             type="button"
-            className="md:hidden text-primary-fixed p-2 rounded hover:bg-primary-fixed/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-fixed"
+            className={cn('md:hidden text-primary-fixed p-2 rounded hover:bg-primary-fixed/10', focusRing)}
             onClick={() => setIsMenuOpen((o) => !o)}
             aria-expanded={isMenuOpen}
             aria-controls="mobile-menu"
@@ -78,10 +96,11 @@ export const TopNav = () => {
                 <NavLink
                   key={item.path}
                   to={item.path}
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={closeMenu}
                   className={({ isActive }) =>
                     cn(
-                      'p-2 transition-all duration-300 rounded focus-visible:outline-2 focus-visible:outline-primary-fixed',
+                      'p-2 transition-all duration-300 rounded min-h-11 flex items-center',
+                      focusRing,
                       isActive ? 'text-primary-fixed bg-primary-fixed/10' : 'text-on-surface-variant'
                     )
                   }
@@ -91,7 +110,7 @@ export const TopNav = () => {
               ))}
               <a
                 href={resumeHref}
-                onClick={() => setIsMenuOpen(false)}
+                onClick={closeMenu}
                 className="terminal-button inline-flex items-center justify-center gap-2 p-2"
                 target="_blank"
                 rel="noopener noreferrer"

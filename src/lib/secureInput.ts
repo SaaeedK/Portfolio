@@ -1,3 +1,7 @@
+/**
+ * Client-side guardrails for the lab SPL box and Logs terminal.
+ * Blocks injection-style patterns; not a substitute for server validation on /api/contact.
+ */
 export const MAX_QUERY_LEN = 2000;
 const MAX_TERMINAL_LEN = 256;
 

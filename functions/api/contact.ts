@@ -298,6 +298,10 @@ export async function onRequestPost(context: {
     return jsonResponse(400, { error: 'disposable_email' });
   }
 
+  if (!(await checkRateLimits(env, ip))) {
+    return jsonResponse(429, { error: 'rate_limited' });
+  }
+
   const token =
     typeof parsed['cf-turnstile-response'] === 'string' ? parsed['cf-turnstile-response'].trim() : '';
   const turnstileSecret = env.TURNSTILE_SECRET?.trim();
@@ -317,10 +321,6 @@ export async function onRequestPost(context: {
 
   if (!(await domainHasMx(domain))) {
     return jsonResponse(400, { error: 'email_domain_unreachable' });
-  }
-
-  if (!(await checkRateLimits(env, ip))) {
-    return jsonResponse(429, { error: 'rate_limited' });
   }
 
   const safeName = nameRaw.replace(/[\r\n]+/g, ' ').slice(0, MAX_NAME);

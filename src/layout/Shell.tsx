@@ -1,11 +1,14 @@
+/** Site chrome: skip link, top/side nav, main landmark, footer. */
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import { TopNav } from './TopNav';
 import { SideNav } from './SideNav';
 import { site, externalHref, getResumeHref } from '@/data/site';
+import { focusRing } from '@/lib/a11y';
 
 export const Shell = ({ children }: { children: ReactNode }) => {
+  const reduceMotion = useReducedMotion();
   const resumeHref = getResumeHref();
   const github = externalHref(site.githubUrl, '');
   const year = new Date().getFullYear();
@@ -27,9 +30,9 @@ export const Shell = ({ children }: { children: ReactNode }) => {
           tabIndex={-1}
         >
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={reduceMotion ? false : { opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.5 }}
             className="max-w-7xl mx-auto w-full"
           >
             {children}
@@ -41,9 +44,6 @@ export const Shell = ({ children }: { children: ReactNode }) => {
         <div className="max-w-7xl mx-auto px-4 md:px-12 flex flex-col md:flex-row justify-between items-center gap-4 text-secondary-fixed/80">
           <div className="font-mono text-[10px] sm:text-xs text-on-surface-variant">
             © {year} {site.displayName} · personal portfolio
-            <span className="ml-4 bg-surface-variant/80 text-on-surface-variant px-2 py-0.5 rounded text-[8px] sm:text-[10px] font-bold border border-outline-variant/50">
-              Static demo UI
-            </span>
           </div>
           <div className="flex gap-6 font-mono text-[10px] sm:text-xs text-on-surface-variant flex-wrap justify-center">
             {github !== '#' ? (
@@ -51,26 +51,26 @@ export const Shell = ({ children }: { children: ReactNode }) => {
                 href={github}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-primary-fixed transition-colors"
+                className={`hover:text-primary-fixed transition-colors ${focusRing}`}
               >
                 GitHub
               </a>
             ) : null}
-            <Link to="/comms" className="hover:text-primary-fixed transition-colors">
+            <Link to="/comms" className={`hover:text-primary-fixed transition-colors ${focusRing}`}>
               Contact
             </Link>
             <a
               href={resumeHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-primary-fixed transition-colors"
+              className={`hover:text-primary-fixed transition-colors ${focusRing}`}
               title="Opens résumé PDF in a new tab"
             >
               Résumé
             </a>
             <a
               href="https://creativecommons.org/licenses/by/4.0/"
-              className="hover:text-primary-fixed transition-colors"
+              className={`hover:text-primary-fixed transition-colors ${focusRing}`}
             >
               Site terms (CC BY 4.0)
             </a>

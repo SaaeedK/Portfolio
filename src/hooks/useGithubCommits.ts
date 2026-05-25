@@ -1,3 +1,7 @@
+/**
+ * Dashboard commit feed: prefers build-time cache at /data/github-commits.json,
+ * then falls back to the public GitHub REST API for this portfolio repo.
+ */
 import { useEffect, useMemo, useState } from 'react';
 import {
   fetchPortfolioCommits,

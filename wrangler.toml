@@ -25,9 +25,10 @@ VITE_GITHUB_URL = "https://github.com/SaaeedK"
 VITE_GITHUB_REPO = "SaaeedK/Portfolio"
 VITE_LINKEDIN_URL = "https://linkedin.com/in/saaeed-khan"
 
-# Preview: looser geo (wrangler pages dev has no cf.country)
+# Preview: looser geo (wrangler pages dev has no cf.country); local Vite origins for POST /api/contact
 [env.preview.vars]
 CONTACT_ALLOWED_COUNTRIES = ""
+ALLOWED_ORIGINS = "http://127.0.0.1:3000,http://localhost:3000,https://portfolio-6v0.pages.dev"
 
 # KV rate limits for POST /api/contact (3/min, 6/hr per IP)
 [[kv_namespaces]]

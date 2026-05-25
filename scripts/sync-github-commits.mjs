@@ -1,3 +1,7 @@
+/**
+ * Build-time cache: fetches recent commits for VITE_GITHUB_REPO into
+ * public/data/github-commits.json (gitignored). Uses GITHUB_TOKEN only when needed.
+ */
 import fs from 'node:fs';
 import path from 'node:path';
 

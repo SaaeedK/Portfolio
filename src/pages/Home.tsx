@@ -1,3 +1,4 @@
+/** Dashboard: lab cards, projects, and GitHub commit activity. */
 import { Terminal, History, Blocks, Activity, Wifi, Bug, FileJson, Cloud, Globe, Plus, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { NavLink } from 'react-router-dom';
@@ -5,10 +6,12 @@ import { labs, projects } from '@/data/portfolio';
 import { cn } from '@/lib/utils';
 import { site, externalHref } from '@/data/site';
 import { useGithubCommits } from '@/hooks/useGithubCommits';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 const defaultHeights = [6, 12, 8, 14, 10, 9, 11, 7, 13, 8, 10, 12];
 
 export const Home = () => {
+  useDocumentTitle('Dashboard');
   const { commits, status, source, repo, latestCommitId } = useGithubCommits();
   const githubProfile = externalHref(site.githubUrl, '#');
 
@@ -192,7 +195,7 @@ export const Home = () => {
                         href={commit.repoUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-secondary-fixed/80 hover:text-secondary-fixed"
+                        className="text-secondary-fixed/80 hover:text-secondary-fixed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-fixed rounded"
                       >
                         {commit.repoFullName}
                       </a>

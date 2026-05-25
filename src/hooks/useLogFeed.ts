@@ -1,3 +1,7 @@
+/**
+ * Decorative log stream for /logs: polls GET /api/logs when deployed,
+ * otherwise rotates lines from public/data/log-feed.json (curated fiction).
+ */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { AlertTriangle, CheckCircle, GitCommit, Info, Shield } from 'lucide-react';

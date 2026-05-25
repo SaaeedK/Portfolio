@@ -1,3 +1,5 @@
+/** Shared domain types for portfolio content, GitHub feed, and lab sandbox data. */
+
 export interface Lab {
   id: string;
   title: string;

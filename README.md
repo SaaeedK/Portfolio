@@ -32,6 +32,7 @@ Terminal-inspired portfolio UI: dashboard, Splunk-style **lab exercises** (JSON-
 | `npm run build` | Production bundle to `dist/`     |
 | `npm run preview` | Serve `dist/` locally            |
 | `npm run lint` | `tsc --noEmit` + ESLint            |
+| `npm test` | Vitest unit tests (`secureInput`, `splQuery`) |
 | `npm run security:check` | `npm audit` (high+); CI also runs [gitleaks](.gitleaks.toml) |
 | `npm run clean` | Remove `dist/` (cross-platform)  |
 
@@ -43,7 +44,7 @@ Terminal-inspired portfolio UI: dashboard, Splunk-style **lab exercises** (JSON-
 | [`src/routes.tsx`](src/routes.tsx) | Declarative `<Routes>` / `<Route>` table |
 | [`src/layout/`](src/layout/) | `Shell`, `TopNav`, `SideNav` (site chrome) |
 | [`src/pages/`](src/pages/) | Route-level screens only |
-| [`src/data/`](src/data/) | Content modules and [`src/data/index.ts`](src/data/index.ts) barrel |
+| [`src/data/`](src/data/) | Site copy, portfolio cards, lab JSON, log sidebar labels |
 | [`src/lib/`](src/lib/) | Shared utilities (`cn`, etc.) |
 | [`src/types.ts`](src/types.ts) | Shared TypeScript interfaces |
 | [`public/`](public/) | Static assets copied to `dist/` (e.g. [`public/_redirects`](public/_redirects) for SPA routing on Cloudflare Pages) |
@@ -62,7 +63,7 @@ Imports use the `@/*` alias (resolved to [`src/`](src/)) via [`vite.config.ts`](
 
 - **Home labs / timeline / projects:** [`src/data/portfolio.ts`](src/data/portfolio.ts)
 - **Site name and tagline:** [`src/data/site.ts`](src/data/site.ts) (display copy; URLs still come from env)
-- **Lab exercises (SIEM-style tables, queries):** edit [`src/data/lab-scenarios.json`](src/data/lab-scenarios.json) (canonical; copied to `public/data/` on `npm run dev` / `npm run build`). Rows are **bundled** into the app on `/labs` — restart dev or rebuild after changes; SPL filters in the browser ([`src/lib/splQuery.ts`](src/lib/splQuery.ts), [`src/lib/secureInput.ts`](src/lib/secureInput.ts))
+- **Lab exercises (SIEM-style tables, queries):** edit [`src/data/lab-scenarios.json`](src/data/lab-scenarios.json) (bundled at build via [`src/data/labScenarios.ts`](src/data/labScenarios.ts)). Restart dev or rebuild after changes; SPL runs in the browser ([`src/lib/splQuery.ts`](src/lib/splQuery.ts), [`src/lib/secureInput.ts`](src/lib/secureInput.ts))
 - **Live log tail pool:** [`public/data/log-feed.json`](public/data/log-feed.json) — polled via [`GET /api/logs`](functions/api/logs.ts) on `/logs` (read-only, rate-limited)
 - **Static log sidebar labels:** [`src/data/logFeed.ts`](src/data/logFeed.ts)
 
@@ -111,7 +112,7 @@ This creates the `CONTACT_RATE_LIMIT` namespace and writes its id into `wrangler
 **3. Custom domain (optional)**
 
 1. Pages project → **Custom domains** → add your domain and apply the DNS records Cloudflare shows (often a CNAME to your `*.pages.dev` host). Use **Full (strict)** SSL once DNS propagates.
-2. Append the origin to `ALLOWED_ORIGINS` in [`wrangler.toml`](wrangler.toml) (comma-separated, **no trailing slashes**), e.g. `https://portfolio-6v0.pages.dev,https://www.yourdomain.com`, then commit and redeploy so the contact form and **`GET /api/logs`** accept requests from the new host.
+2. Append the origin to `ALLOWED_ORIGINS` in [`wrangler.toml`](wrangler.toml) (comma-separated, **no trailing slashes**), e.g. `https://portfolio-6v0.pages.dev,https://www.yourdomain.com`, then commit and redeploy so **POST /api/contact** accepts requests from the new host (`GET /api/logs` is read-only and does not use origin allowlisting).
 
 **Local dev with Functions:** run `npm run pages:dev` in one terminal and `npm run dev` in another (Vite proxies `/api/contact` and `/api/logs` to port 8788).
 
@@ -155,8 +156,8 @@ Do **not** put API secrets in `VITE_*` variables; they are exposed in the client
 
 **Hardening in this repo**
 
-- [`public/_headers`](public/_headers) — CSP (Turnstile + optional Firebase Analytics), `frame-ancestors 'none'`, HSTS, `Referrer-Policy`, `Permissions-Policy`.
-- [`functions/api/contact.ts`](functions/api/contact.ts) — Turnstile and MX checks before KV rate limits; rate limit immediately before Resend send.
+- [`public/_headers`](public/_headers) — CSP (Turnstile + optional Firebase Analytics; `font-src` includes `data:` for widget-embedded fonts), `frame-ancestors 'none'`, HSTS, `Referrer-Policy`, `Permissions-Policy`.
+- [`functions/api/contact.ts`](functions/api/contact.ts) — KV rate limits run after field validation and before Turnstile/MX/Resend (cheap rejection before external calls).
 - [`functions/lib/responseHeaders.ts`](functions/lib/responseHeaders.ts) — shared `nosniff`, `no-store`, `X-Frame-Options`, `Referrer-Policy` on API JSON responses.
 - CI runs [`npm run security:check`](scripts/security-check.mjs) and [gitleaks-action](.github/workflows/ci.yml) with [`.gitleaks.toml`](.gitleaks.toml).
 
@@ -165,7 +166,7 @@ Do **not** put API secrets in `VITE_*` variables; they are exposed in the client
 **Before making this repository public**
 
 1. Run `npm run security:check` locally (same gate as CI).
-2. Confirm no `.env`, `.env.local`, or `.dev.vars` files are tracked; only [`.env.example`](.env.example) should be in git.
+2. Confirm no `.env`, `.env.local`, or `.dev.vars` files are tracked; only [`.env.example`](.env.example) should be in git. Do not commit `dist/`, `node_modules/`, or generated `public/data/github-commits.json` (see [`.gitignore`](.gitignore); `npm run security:check` enforces this).
 3. [`public/resume.pdf`](public/resume.pdf) contains **name, employers, and locations** (no email/phone) — intentional public professional data.
 4. [`wrangler.toml`](wrangler.toml) exposes **Turnstile site key** (public), **Pages URL**, **KV namespace id**, and profile links — not Resend/Turnstile secrets.
 5. Keep `RESEND_API_KEY`, `TURNSTILE_SECRET`, and `CONTACT_TO_EMAIL` in **Cloudflare Pages Secrets only**.

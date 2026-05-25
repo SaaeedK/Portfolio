@@ -1,3 +1,7 @@
+/**
+ * Bundled lab scenarios (canonical JSON in this folder).
+ * Bump LAB_DATA_REVISION when row data changes so /labs shows a fresh cache hint.
+ */
 import scenariosJson from './lab-scenarios.json';
 import type { LabScenario } from '@/types';
 

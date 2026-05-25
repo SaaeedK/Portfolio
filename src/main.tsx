@@ -1,3 +1,7 @@
+/**
+ * Client entry: fonts, optional Firebase bootstrap, React root.
+ * Firebase loads only when VITE_FIREBASE_* build vars are present (see src/lib/firebase.ts).
+ */
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@fontsource-variable/inter/wght.css';

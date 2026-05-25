@@ -6,7 +6,6 @@
 import { jsonResponse } from '../lib/responseHeaders';
 
 export interface Env {
-  ALLOWED_ORIGINS?: string;
   CONTACT_RATE_LIMIT?: KVNamespace;
 }
 
@@ -14,22 +13,6 @@ type FeedTemplate = { id: string; type: string; message: string };
 
 const RL_MAX_PER_MINUTE = 30;
 const RATE_MINUTE_MS = 60_000;
-
-function checkOrigin(request: Request, env: Env): Response | null {
-  const raw = env.ALLOWED_ORIGINS?.trim();
-  if (!raw) return null;
-  const allowed = new Set(
-    raw
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean),
-  );
-  const origin = request.headers.get('Origin');
-  if (!origin || !allowed.has(origin)) {
-    return jsonResponse(403, { error: 'origin_not_allowed' });
-  }
-  return null;
-}
 
 function clientIp(request: Request): string {
   return (
@@ -67,9 +50,6 @@ async function loadPool(request: Request): Promise<FeedTemplate[]> {
 
 export async function onRequestGet(context: { request: Request; env: Env }): Promise<Response> {
   const { request, env } = context;
-
-  const originBlock = checkOrigin(request, env);
-  if (originBlock) return originBlock;
 
   const ip = clientIp(request);
   const kv = env.CONTACT_RATE_LIMIT;

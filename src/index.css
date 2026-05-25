@@ -49,6 +49,10 @@
   .terminal-button:hover {
     @apply bg-primary-fixed text-background shadow-[0_0_20px_rgba(0,251,251,0.4)];
   }
+
+  .terminal-button:focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary-fixed;
+  }
 }
 
 @keyframes blink {
@@ -66,6 +70,21 @@
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+@media (min-width: 768px) {
+  .scroll-region-md {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 251, 251, 0.35) transparent;
+  }
+  .scroll-region-md::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scroll-region-md::-webkit-scrollbar-thumb {
+    background: rgba(0, 251, 251, 0.35);
+    border-radius: 3px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

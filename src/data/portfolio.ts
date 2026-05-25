@@ -1,3 +1,4 @@
+/** Static lab cards and project highlights shown on the dashboard. */
 import type { Lab, Project } from '@/types';
 
 export const labs: Lab[] = [

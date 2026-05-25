@@ -1,3 +1,7 @@
+/**
+ * Lab route state: reads bundled scenarios, syncs ?lab= query to a valid id,
+ * and exposes metrics derived from the active scenario.
+ */
 import { useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { LAB_DATA_REVISION, labScenarios } from '@/data/labScenarios';

@@ -1,3 +1,4 @@
+/** Optional Firebase Web SDK bootstrap (Analytics when measurement ID is set). */
 import { getApps, initializeApp, type FirebaseApp, type FirebaseOptions } from 'firebase/app';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 
@@ -48,9 +49,5 @@ export function initFirebase(): FirebaseApp | null {
     });
   }
 
-  return cachedApp;
-}
-
-export function getFirebaseApp(): FirebaseApp | null {
   return cachedApp;
 }

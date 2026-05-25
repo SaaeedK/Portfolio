@@ -1,8 +1,4 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
+/** Application shell: client router, layout chrome, and lazy-loaded route modules. */
 import { BrowserRouter as Router } from 'react-router-dom';
 import { Shell } from '@/layout';
 import { AppRoutes } from '@/routes';

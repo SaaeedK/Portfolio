@@ -1,3 +1,7 @@
+/**
+ * In-browser SPL subset for curated lab rows only — no network or shell execution.
+ * Pipelines after the first `|` stage are interpreted locally against bundled JSON.
+ */
 import type { LabAggregate, LabLogRow } from '@/types';
 
 const IPV4 = /\b(?:\d{1,3}\.){3}\d{1,3}\b/g;

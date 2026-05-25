@@ -1,3 +1,4 @@
+/** Primary site navigation — paths must stay in sync with src/routes.tsx. */
 import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard,

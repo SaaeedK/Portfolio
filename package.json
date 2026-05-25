@@ -8,12 +8,14 @@
   },
   "scripts": {
     "dev": "vite --port=3000 --host=127.0.0.1",
-    "predev": "node scripts/sync-lab-scenarios.mjs && node scripts/sync-github-commits.mjs && npx --yes tsx scripts/verify-labs.ts",
-    "prebuild": "node scripts/sync-lab-scenarios.mjs && node scripts/sync-github-commits.mjs && npx --yes tsx scripts/verify-labs.ts",
+    "predev": "node scripts/sync-github-commits.mjs && npx --yes tsx scripts/verify-labs.ts",
+    "prebuild": "node scripts/sync-github-commits.mjs && npx --yes tsx scripts/verify-labs.ts",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "node --input-type=module -e \"import fs from 'node:fs'; try { fs.rmSync('dist', { recursive: true, force: true }); } catch (_) {}\"",
     "lint": "tsc --noEmit && tsc --noEmit -p tsconfig.functions.json && eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "security:check": "node scripts/security-check.mjs",
     "pages:dev": "npm run build && wrangler pages dev dist --ip 127.0.0.1 --port 8788",
     "kv:create": "wrangler kv namespace create CONTACT_RATE_LIMIT",
@@ -50,6 +52,7 @@
     "tailwindcss": "^4.1.14",
     "typescript": "~5.8.2",
     "typescript-eslint": "^8.32.1",
+    "vitest": "^3.2.4",
     "wrangler": "^4.90.0"
   }
 }

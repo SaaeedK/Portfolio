@@ -1,3 +1,7 @@
+/**
+ * GitHub commit feed for the dashboard — static cache path and live API fallback.
+ * Uses only public endpoints unless GITHUB_TOKEN is set at build time (private repos).
+ */
 import type { GithubCommit } from '@/types';
 import { site } from '@/data/site';
 

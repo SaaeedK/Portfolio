@@ -1,10 +1,13 @@
-import { useState } from 'react';
+/** Decorative log tail + local terminal (validated input; no remote shell). */
+import { useEffect, useRef, useState } from 'react';
 import { Radar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'motion/react';
 import { logThreatSidebar } from '@/data/logFeed';
 import { useLogFeed } from '@/hooks/useLogFeed';
 import { validateTerminalInput } from '@/lib/secureInput';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { focusRing } from '@/lib/a11y';
 
 const STATUS_LABEL: Record<string, string> = {
   connecting: 'Connecting…',
@@ -14,9 +17,24 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export const Logs = () => {
+  useDocumentTitle('Logs');
   const { entries, status, lastRefresh } = useLogFeed();
   const [command, setCommand] = useState('');
   const [commandError, setCommandError] = useState('');
+  const [liveMessage, setLiveMessage] = useState('');
+  const prevStatus = useRef(status);
+  const prevCount = useRef(0);
+
+  useEffect(() => {
+    if (prevStatus.current !== status) {
+      setLiveMessage(`Log feed: ${STATUS_LABEL[status] ?? status}`);
+    } else if (entries.length > prevCount.current && entries.length > 0) {
+      const delta = entries.length - prevCount.current;
+      setLiveMessage(delta === 1 ? '1 new log entry' : `${delta} new log entries`);
+    }
+    prevStatus.current = status;
+    prevCount.current = entries.length;
+  }, [status, entries.length]);
 
   const onCommandChange = (value: string) => {
     const check = validateTerminalInput(value);
@@ -26,6 +44,14 @@ export const Logs = () => {
 
   return (
     <div className="flex flex-col gap-4">
+      <h1 className="text-2xl md:text-4xl font-bold text-primary tracking-tight">Log tail</h1>
+      <p
+        className="sr-only"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {liveMessage}
+      </p>
       <p className="font-mono text-[11px] text-on-surface-variant border border-outline-variant/40 rounded px-3 py-2 bg-surface-variant/20 max-w-2xl">
         Curated portfolio log tail — polled every 12s from <code className="text-primary-fixed">GET /api/logs</code>{' '}
         (read-only, rate-limited). Nothing you type is executed on a server.
@@ -63,7 +89,7 @@ export const Logs = () => {
               </div>
             </div>
 
-            <div className="p-4 sm:p-6 flex-1 overflow-y-auto no-scrollbar font-mono text-[13px] leading-relaxed flex flex-col gap-4 bg-[#050a0a]">
+            <div className="p-4 sm:p-6 flex-1 overflow-y-auto max-md:no-scrollbar scroll-region-md font-mono text-[13px] leading-relaxed flex flex-col gap-4 bg-[#050a0a]">
               {entries.length === 0 ? (
                 <p className="text-on-surface-variant/60">Waiting for log stream…</p>
               ) : (
@@ -163,7 +189,10 @@ export const Logs = () => {
                 value={command}
                 onChange={(e) => onCommandChange(e.target.value)}
                 placeholder="Filter note — not executed"
-                className="bg-transparent border-none p-0 focus:ring-0 text-xs font-mono text-on-surface placeholder:text-white/10 w-full"
+                className={cn(
+                  'bg-transparent border-none p-0 text-xs font-mono text-on-surface placeholder:text-white/10 w-full',
+                  focusRing
+                )}
                 autoComplete="off"
                 spellCheck={false}
                 maxLength={256}

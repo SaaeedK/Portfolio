@@ -1,7 +1,12 @@
+/**
+ * Contact page: profile links, résumé, and POST /api/contact (Resend + Turnstile on Cloudflare).
+ * Server secrets never use VITE_* — see functions/api/contact.ts and .env.example.
+ */
 import { useCallback, useState } from 'react';
 import { Github, Linkedin, ExternalLink, Send, Loader2, CheckCircle2 } from 'lucide-react';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { site, externalHref } from '@/data/site';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 const CONTACT_API = (import.meta.env.VITE_CONTACT_API_URL || '/api/contact').replace(/\/$/, '');
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim() || '';
@@ -45,6 +50,7 @@ function errorMessage(code: string): string {
 }
 
 export const Comms = () => {
+  useDocumentTitle('Contact');
   const github = externalHref(site.githubUrl, '#');
   const linkedin = externalHref(site.linkedinUrl, '#');
   const profilesConfigured = github !== '#' && linkedin !== '#';

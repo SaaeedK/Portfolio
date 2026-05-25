@@ -1,3 +1,4 @@
+/** Splunk-style lab sandbox: curated JSON rows, in-browser SPL, and threat panels. */
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -27,8 +28,11 @@ import { MAX_QUERY_LEN, validateSecureQueryInput } from '@/lib/secureInput';
 import { filterLabRows, isLabQueryFiltered, resolveLabAggregates } from '@/lib/splQuery';
 import { motion } from 'motion/react';
 import { labs } from '@/data/portfolio';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { focusRing } from '@/lib/a11y';
 
 export const Labs = () => {
+  useDocumentTitle('Labs');
   const navigate = useNavigate();
   const { load, scenario, labId, scenarioIds, setLabId, dataRevision } = useLabScenario();
   const [copyStatus, setCopyStatus] = useState('');
@@ -102,6 +106,32 @@ export const Labs = () => {
   const onApplyToolboxSnippet = (query: string) => {
     onQueryChange(query);
     void onCopyQuery(query);
+  };
+
+  const onScenarioTabKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, currentId: string) => {
+    const idx = scenarioIds.indexOf(currentId);
+    if (idx < 0) return;
+    let nextIdx = idx;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      nextIdx = (idx + 1) % scenarioIds.length;
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      nextIdx = (idx - 1 + scenarioIds.length) % scenarioIds.length;
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      nextIdx = 0;
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      nextIdx = scenarioIds.length - 1;
+    } else {
+      return;
+    }
+    const nextId = scenarioIds[nextIdx];
+    if (nextId) {
+      setLabId(nextId);
+      document.getElementById(`lab-tab-${nextId}`)?.focus();
+    }
   };
 
   const onExportJson = () => {
@@ -192,12 +222,17 @@ export const Labs = () => {
         {scenarioIds.map((id) => (
           <button
             key={id}
+            id={`lab-tab-${id}`}
             type="button"
             role="tab"
             aria-selected={id === labId}
+            aria-controls={`lab-panel-${id}`}
+            tabIndex={id === labId ? 0 : -1}
             onClick={() => setLabId(id)}
+            onKeyDown={(e) => onScenarioTabKeyDown(e, id)}
             className={cn(
               'font-mono text-[10px] px-3 py-1.5 border rounded transition-colors',
+              focusRing,
               id === labId
                 ? 'border-primary-fixed text-primary-fixed bg-primary-fixed/10'
                 : 'border-outline-variant/50 text-on-surface-variant hover:border-primary-fixed/40'
@@ -208,6 +243,13 @@ export const Labs = () => {
         ))}
       </div>
 
+      <div
+        id={`lab-panel-${labId}`}
+        role="tabpanel"
+        aria-labelledby={`lab-tab-${labId}`}
+        tabIndex={0}
+        className="flex flex-col gap-8 outline-none"
+      >
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 w-full border-b border-primary-fixed/20 pb-6">
         <div>
           <div className="flex flex-wrap items-center gap-3 mb-2">
@@ -344,7 +386,7 @@ export const Labs = () => {
               </div>
             </div>
 
-            <div className="p-4 sm:p-6 overflow-x-auto no-scrollbar font-mono text-xs">
+            <div className="p-4 sm:p-6 overflow-x-auto max-md:no-scrollbar scroll-region-md font-mono text-xs">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="text-on-surface/40 border-b border-outline-variant/30">
@@ -598,6 +640,7 @@ export const Labs = () => {
             </div>
           </section>
         </div>
+      </div>
       </div>
     </div>
   );

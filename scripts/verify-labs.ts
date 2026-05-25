@@ -2,6 +2,10 @@
  * Smoke-check LAB_01–03 queries using production splQuery + scenario JSON.
  * Run: npx --yes tsx scripts/verify-labs.ts
  */
+/**
+ * Predev/prebuild gate: asserts SPL toolbox queries return expected row counts
+ * against bundled lab-scenarios.json (keeps /labs demos consistent).
+ */
 import scenariosJson from '../src/data/lab-scenarios.json';
 import { formatLabRowTime, sortLabRowsByTime } from '../src/lib/labScenario';
 import {

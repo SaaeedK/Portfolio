@@ -22,4 +22,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_CONFIG: .gitleaks.toml
       - run: npm run lint
+      - run: npm test
       - run: npm run build

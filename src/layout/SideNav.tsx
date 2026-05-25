@@ -1,8 +1,10 @@
+/** Desktop primary navigation (lg+); mirrors routes in config/navigation.ts. */
 import { NavLink } from 'react-router-dom';
-import { ShieldCheck, Mail } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { primaryNav } from '@/config/navigation';
 import { cn } from '@/lib/utils';
 import { site } from '@/data/site';
+import { focusRing } from '@/lib/a11y';
 
 export const SideNav = () => {
   return (
@@ -23,7 +25,10 @@ export const SideNav = () => {
           </div>
           <NavLink
             to="/labs?lab=LAB_01"
-            className="mt-4 w-full font-mono text-[10px] border border-secondary-fixed text-secondary-fixed py-2 hover:bg-secondary-fixed hover:text-background transition-all duration-300 shadow-[0_0_10px_rgba(76,227,70,0.2)] text-center"
+            className={cn(
+              'mt-4 w-full font-mono text-[10px] border border-secondary-fixed text-secondary-fixed py-2 hover:bg-secondary-fixed hover:text-background transition-all duration-300 shadow-[0_0_10px_rgba(76,227,70,0.2)] text-center',
+              focusRing
+            )}
           >
             VIEW_LAB_DEMO
           </NavLink>
@@ -37,6 +42,7 @@ export const SideNav = () => {
               className={({ isActive }) =>
                 cn(
                   'px-6 py-3 transition-all duration-300 flex items-center gap-4 font-mono text-xs group/item',
+                  focusRing,
                   isActive
                     ? 'bg-secondary-fixed/10 text-secondary-fixed border-l-4 border-primary-fixed'
                     : 'text-on-surface-variant hover:text-primary-fixed hover:bg-surface-variant/30'
@@ -48,23 +54,6 @@ export const SideNav = () => {
             </NavLink>
           ))}
         </nav>
-      </div>
-
-      <div className="flex flex-col border-t border-primary-fixed/10 pt-4">
-        <NavLink
-          to="/comms"
-          className={({ isActive }) =>
-            cn(
-              'px-6 py-3 transition-all duration-300 flex items-center gap-4 font-mono text-xs group/item',
-              isActive
-                ? 'bg-secondary-fixed/10 text-secondary-fixed border-l-4 border-primary-fixed'
-                : 'text-on-surface-variant hover:text-primary-fixed hover:bg-surface-variant/30'
-            )
-          }
-        >
-          <Mail size={18} aria-hidden />
-          <span>CONTACT</span>
-        </NavLink>
       </div>
     </aside>
   );
