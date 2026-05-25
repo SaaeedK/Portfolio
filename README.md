@@ -61,8 +61,9 @@ Imports use the `@/*` alias (resolved to [`src/`](src/)) via [`vite.config.ts`](
 
 - **Home labs / timeline / projects:** [`src/data/portfolio.ts`](src/data/portfolio.ts)
 - **Site name and tagline:** [`src/data/site.ts`](src/data/site.ts) (display copy; URLs still come from env)
-- **Lab exercises (SIEM-style tables, queries):** [`public/data/lab-scenarios.json`](public/data/lab-scenarios.json) — loaded at runtime on `/labs`; metrics are computed in [`src/lib/labScenario.ts`](src/lib/labScenario.ts)
-- **Log feed samples:** [`src/data/logFeed.ts`](src/data/logFeed.ts)
+- **Lab exercises (SIEM-style tables, queries):** [`public/data/lab-scenarios.json`](public/data/lab-scenarios.json) — loaded at runtime on `/labs`; SPL input filters rows in the browser ([`src/lib/splQuery.ts`](src/lib/splQuery.ts), [`src/lib/secureInput.ts`](src/lib/secureInput.ts))
+- **Live log tail pool:** [`public/data/log-feed.json`](public/data/log-feed.json) — polled via [`GET /api/logs`](functions/api/logs.ts) on `/logs` (read-only, rate-limited)
+- **Static log sidebar labels:** [`src/data/logFeed.ts`](src/data/logFeed.ts)
 
 ## Deploy
 
@@ -106,7 +107,9 @@ This creates the `CONTACT_RATE_LIMIT` namespace and writes its id into `wrangler
 **3. Custom domain (optional)**
 
 1. Pages project → **Custom domains** → add your domain and apply the DNS records Cloudflare shows (often a CNAME to your `*.pages.dev` host). Use **Full (strict)** SSL once DNS propagates.
-2. Append the origin to `ALLOWED_ORIGINS` in [`wrangler.toml`](wrangler.toml) (comma-separated, **no trailing slashes**), e.g. `https://portfolio-6v0.pages.dev,https://www.yourdomain.com`, then commit and redeploy so the contact form accepts POSTs from the new host.
+2. Append the origin to `ALLOWED_ORIGINS` in [`wrangler.toml`](wrangler.toml) (comma-separated, **no trailing slashes**), e.g. `https://portfolio-6v0.pages.dev,https://www.yourdomain.com`, then commit and redeploy so the contact form and **`GET /api/logs`** accept requests from the new host.
+
+**Local dev with Functions:** run `npm run pages:dev` in one terminal and `npm run dev` in another (Vite proxies `/api/contact` and `/api/logs` to port 8788).
 
 ### Firebase (optional services alongside Pages)
 
