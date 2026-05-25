@@ -1,6 +1,6 @@
 # Cyber portfolio (Vite + React)
 
-Terminal-inspired portfolio UI: dashboard, Splunk-style **static demo** lab, decorative log stream, and a **Contact** page with profiles plus a résumé link that **opens the PDF in a new tab** (no public email in env — contact details live in your PDF).
+Terminal-inspired portfolio UI: dashboard, Splunk-style **lab exercises** (JSON-backed), decorative log stream, and a **Contact** page with profiles plus a résumé link that **opens the PDF in a new tab** (no public email in env — contact details live in your PDF).
 
 ## Prerequisites
 
@@ -61,7 +61,7 @@ Imports use the `@/*` alias (resolved to [`src/`](src/)) via [`vite.config.ts`](
 
 - **Home labs / timeline / projects:** [`src/data/portfolio.ts`](src/data/portfolio.ts)
 - **Site name and tagline:** [`src/data/site.ts`](src/data/site.ts) (display copy; URLs still come from env)
-- **Lab mock (tables, queries):** [`src/data/labDemo.ts`](src/data/labDemo.ts)
+- **Lab exercises (SIEM-style tables, queries):** [`public/data/lab-scenarios.json`](public/data/lab-scenarios.json) — loaded at runtime on `/labs`; metrics are computed in [`src/lib/labScenario.ts`](src/lib/labScenario.ts)
 - **Log feed samples:** [`src/data/logFeed.ts`](src/data/logFeed.ts)
 
 ## Deploy

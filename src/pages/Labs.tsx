@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -11,22 +11,21 @@ import {
   Wrench,
   ArrowRight,
   BookOpen,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { copyText } from '@/lib/clipboard';
+import { highlightTokenInText, rowSeverityClass } from '@/lib/labScenario';
+import { useLabScenario } from '@/hooks/useLabScenario';
 import { motion } from 'motion/react';
-import {
-  labDemoAggregates,
-  labDemoBanner,
-  labDemoLogRows,
-  labDemoQuery,
-  labDemoThreatSummary,
-  labDemoToolboxQueries,
-} from '@/data/labDemo';
+import { labs } from '@/data/portfolio';
 
 export const Labs = () => {
   const navigate = useNavigate();
+  const { load, scenario, metrics, labId, scenarioIds, setLabId } = useLabScenario();
   const [copyStatus, setCopyStatus] = useState('');
+
+  const labMeta = useMemo(() => labs.find((l) => l.id === labId), [labId]);
 
   const onCopyQuery = async (query: string) => {
     const ok = await copyText(query);
@@ -34,11 +33,62 @@ export const Labs = () => {
     window.setTimeout(() => setCopyStatus(''), 3000);
   };
 
+  const onExportJson = () => {
+    if (!scenario || !metrics) return;
+    const blob = new Blob(
+      [
+        JSON.stringify(
+          {
+            exportedAt: new Date().toISOString(),
+            scenario,
+            metrics: {
+              totalEvents: metrics.totalEvents,
+              queryTimeSec: metrics.queryTimeSec,
+              narrativeWeight: metrics.narrativeWeight,
+            },
+          },
+          null,
+          2
+        ),
+      ],
+      { type: 'application/json' }
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${scenario.id}-export.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (load.status === 'loading') {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 min-h-[320px] font-mono text-sm text-on-surface-variant">
+        <Loader2 className="animate-spin text-primary-fixed" size={28} aria-hidden />
+        <p>Loading lab scenario data…</p>
+      </div>
+    );
+  }
+
+  if (load.status === 'error' || !scenario || !metrics) {
+    return (
+      <div className="flex flex-col gap-4 max-w-xl">
+        <p className="font-mono text-sm text-error-fixed">
+          Could not load lab data{load.status === 'error' ? `: ${load.message}` : ''}.
+        </p>
+        <button type="button" className="terminal-button w-fit" onClick={() => window.location.reload()}>
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-8">
       <p className="font-mono text-[11px] text-on-surface-variant border border-outline-variant/40 rounded px-3 py-2 bg-surface-variant/20 max-w-3xl">
-        This page is a <span className="text-primary-fixed font-bold">static UI mock</span> for a portfolio piece. It does not connect to Splunk or
-        any live data source.
+        Exercise data is loaded from{' '}
+        <code className="text-primary-fixed">/data/lab-scenarios.json</code> on this site. Metrics (event counts, bars,
+        narrative weight) are computed from that dataset — not from Splunk or a live SIEM.
       </p>
 
       {copyStatus ? (
@@ -47,28 +97,52 @@ export const Labs = () => {
         </p>
       ) : null}
 
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Lab scenarios">
+        {scenarioIds.map((id) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={id === labId}
+            onClick={() => setLabId(id)}
+            className={cn(
+              'font-mono text-[10px] px-3 py-1.5 border rounded transition-colors',
+              id === labId
+                ? 'border-primary-fixed text-primary-fixed bg-primary-fixed/10'
+                : 'border-outline-variant/50 text-on-surface-variant hover:border-primary-fixed/40'
+            )}
+          >
+            {id}
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 w-full border-b border-primary-fixed/20 pb-6">
         <div>
           <div className="flex flex-wrap items-center gap-3 mb-2">
             <span className="px-2 py-0.5 bg-primary-fixed/10 text-primary-fixed font-mono text-[10px] border border-primary-fixed/30 rounded">
-              {labDemoBanner.environmentLabel}
+              {scenario.environmentLabel}
             </span>
             <span className="px-2 py-0.5 bg-surface-variant text-on-surface-variant font-mono text-[10px] border border-outline-variant/50 rounded flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-secondary-fixed" aria-hidden />
-              {labDemoBanner.statusLabel}
+              {scenario.statusLabel}
             </span>
+            {labMeta ? (
+              <span className="px-2 py-0.5 font-mono text-[10px] text-on-surface-variant border border-outline-variant/40 rounded">
+                {labMeta.category} · {labMeta.difficulty}
+              </span>
+            ) : null}
           </div>
-          <h1 className="text-2xl md:text-4xl font-bold text-primary tracking-tight">Sample exercise: suspicious login spikes</h1>
+          <h1 className="text-2xl md:text-4xl font-bold text-primary tracking-tight">{scenario.headline}</h1>
+          <p className="font-mono text-xs text-on-surface-variant mt-2">{scenario.title}</p>
         </div>
         <div className="flex items-center gap-4 w-full md:w-auto">
           <button
             type="button"
-            disabled
-            aria-disabled="true"
-            title="Portfolio demo — not connected to Splunk"
-            className="font-mono text-xs text-on-surface-variant opacity-50 cursor-not-allowed flex items-center gap-2"
+            className="font-mono text-xs text-on-surface-variant hover:text-primary-fixed flex items-center gap-2"
+            onClick={() => setLabId(scenarioIds[0] ?? 'LAB_01')}
           >
-            <History size={16} aria-hidden /> Reset view (demo)
+            <History size={16} aria-hidden /> Reset view
           </button>
           <button
             type="button"
@@ -91,7 +165,7 @@ export const Labs = () => {
               <div className="flex gap-3">
                 <span className="text-secondary-fixed opacity-70">&gt;</span>
                 <div spellCheck={false} className="outline-none w-full whitespace-pre-wrap">
-                  {labDemoQuery}
+                  {scenario.query}
                   <span className="blinking-cursor" />
                 </div>
               </div>
@@ -106,18 +180,17 @@ export const Labs = () => {
               </div>
               <div className="hidden sm:flex items-center gap-6 font-mono text-[10px]">
                 <span className="text-on-surface-variant">
-                  EVENTS: <span className="text-secondary-fixed">4,192</span>
+                  EVENTS: <span className="text-secondary-fixed">{metrics.totalEvents.toLocaleString()}</span>
                 </span>
                 <span className="text-on-surface-variant">
-                  TIME: <span className="text-on-surface">1.4s</span>
+                  TIME: <span className="text-on-surface">{metrics.queryTimeSec}s</span>
                 </span>
                 <button
                   type="button"
-                  disabled
-                  aria-disabled="true"
-                  aria-label="Export sample (portfolio demo — disabled)"
-                  title="Portfolio demo"
-                  className="text-on-surface-variant opacity-50 cursor-not-allowed"
+                  onClick={onExportJson}
+                  aria-label="Export scenario JSON"
+                  title="Download scenario + computed metrics as JSON"
+                  className="text-primary-fixed hover:text-secondary-fixed transition-colors"
                 >
                   <Download size={16} />
                 </button>
@@ -134,30 +207,21 @@ export const Labs = () => {
                   </tr>
                 </thead>
                 <tbody className="text-on-surface-variant">
-                  {labDemoLogRows.map((log, i) => (
-                    <tr key={i} className="border-b border-outline-variant/10">
+                  {scenario.rows.map((log, i) => (
+                    <tr key={`${log.time}-${log.type}-${i}`} className="border-b border-outline-variant/10">
                       <td className="py-3 pr-4 text-on-surface/60 whitespace-nowrap">{log.time}</td>
                       <td className="py-3 pr-4">
-                        <span
-                          className={cn(
-                            'px-2 py-0.5 rounded text-[9px] font-bold border',
-                            'isError' in log && log.isError
-                              ? 'bg-error-fixed/10 text-error-fixed border-error-fixed/30'
-                              : 'isSuccess' in log && log.isSuccess
-                                ? 'bg-secondary-fixed/10 text-secondary-fixed border-secondary-fixed/30'
-                                : 'bg-surface-variant text-on-surface-variant border-outline-variant/30'
-                          )}
-                        >
+                        <span className={cn('px-2 py-0.5 rounded text-[9px] font-bold border', rowSeverityClass(log))}>
                           {log.type}
                         </span>
                       </td>
                       <td className="py-3 font-mono break-all sm:break-normal">
-                        {log.data.split('192.168.1.105').map((part, pi) => (
+                        {highlightTokenInText(log.data, scenario.highlightIp).map((chunk, pi) => (
                           <Fragment key={pi}>
-                            {part}
-                            {pi === 0 && log.data.includes('192.168.1.105') && (
-                              <span className="text-primary-fixed font-bold">192.168.1.105</span>
-                            )}
+                            {chunk.before}
+                            {chunk.match ? (
+                              <span className="text-primary-fixed font-bold">{chunk.match}</span>
+                            ) : null}
                           </Fragment>
                         ))}
                       </td>
@@ -172,10 +236,10 @@ export const Labs = () => {
                   AGGREGATED_RESULTS: stats count by src_ip
                 </div>
                 <div className="space-y-4">
-                  {labDemoAggregates.map((stat, i) => (
-                    <div key={i} className="flex items-center gap-6">
+                  {metrics.aggregateBars.map((stat) => (
+                    <div key={stat.ip} className="flex items-center gap-6">
                       <div className="w-32 font-bold text-primary-fixed">{stat.ip}</div>
-                      <div className="w-16 text-right font-mono text-on-surface">{stat.count}</div>
+                      <div className="w-16 text-right font-mono text-on-surface">{stat.count.toLocaleString()}</div>
                       <div className="flex-1 h-1.5 bg-surface-variant/30 rounded-full overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
@@ -209,13 +273,13 @@ export const Labs = () => {
                   <AlertTriangle size={18} aria-hidden /> SCENARIO_SUMMARY
                 </h2>
                 <span className="bg-surface-variant text-on-surface-variant px-2 py-0.5 rounded text-[10px] font-bold border border-outline-variant">
-                  DEMO
+                  {scenario.id}
                 </span>
               </div>
 
               <div className="space-y-4 font-mono text-xs">
-                {labDemoThreatSummary.map((item, i) => (
-                  <div key={i} className="flex justify-between items-end border-b border-outline-variant/10 pb-2 gap-4">
+                {scenario.threatSummary.map((item) => (
+                  <div key={item.label} className="flex justify-between items-end border-b border-outline-variant/10 pb-2 gap-4">
                     <span className="text-[10px] text-on-surface-variant uppercase shrink-0">{item.label}:</span>
                     <span className={cn('font-bold text-right', item.valClass)}>{item.value}</span>
                   </div>
@@ -223,11 +287,11 @@ export const Labs = () => {
 
                 <div className="mt-6">
                   <div className="flex justify-between text-[10px] text-on-surface-variant mb-1.5 uppercase font-bold">
-                    <span>Narrative weight (illustrative)</span>
-                    <span>98%</span>
+                    <span>Narrative weight (from row mix)</span>
+                    <span>{metrics.narrativeWeight}%</span>
                   </div>
                   <div className="h-1.5 bg-surface-variant rounded-full overflow-hidden">
-                    <div className="h-full bg-primary-fixed w-[98%]" />
+                    <div className="h-full bg-primary-fixed transition-all duration-500" style={{ width: `${metrics.narrativeWeight}%` }} />
                   </div>
                 </div>
 
@@ -235,7 +299,7 @@ export const Labs = () => {
                   type="button"
                   disabled
                   aria-disabled="true"
-                  title="Portfolio demo — no containment action"
+                  title="Portfolio exercise — containment is illustrative only"
                   className="mt-6 w-full py-3 bg-primary-fixed/10 border border-primary-fixed/50 text-primary-fixed font-bold opacity-50 cursor-not-allowed flex items-center justify-center gap-3"
                 >
                   <Gavel size={16} aria-hidden /> Sample containment (no-op)
@@ -249,8 +313,8 @@ export const Labs = () => {
               <Wrench size={18} aria-hidden /> SIEM_QUERIES_TOOLBOX
             </h2>
             <div className="flex flex-col gap-3">
-              <p className="text-[11px] text-on-surface-variant mb-2">Click a snippet to copy to clipboard (portfolio demo):</p>
-              {labDemoToolboxQueries.map((query, i) => (
+              <p className="text-[11px] text-on-surface-variant mb-2">Click a snippet to copy to clipboard:</p>
+              {scenario.toolboxQueries.map((query, i) => (
                 <button
                   key={i}
                   type="button"

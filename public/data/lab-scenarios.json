@@ -1,0 +1,155 @@
+[
+  {
+    "id": "LAB_01",
+    "title": "Splunk Log Analysis",
+    "headline": "Suspicious login spikes — SSH brute force",
+    "environmentLabel": "Portfolio dataset · Splunk-style",
+    "statusLabel": "Curated exercise (sample auth logs)",
+    "query": "index=main sourcetype=\"linux_secure\" action=\"failure\" user=\"root\"\n| stats count by src_ip\n| where count > 50\n| sort - count",
+    "highlightIp": "192.168.1.105",
+    "threatSummary": [
+      { "label": "HIGHLIGHT_IP", "value": "192.168.1.105", "valClass": "text-primary-fixed" },
+      { "label": "SCENARIO", "value": "SSH brute force (auth correlation)", "valClass": "text-on-surface" },
+      { "label": "CONTEXT", "value": "linux_secure · root failures", "valClass": "text-secondary-fixed" }
+    ],
+    "rows": [
+      {
+        "time": "2024-10-27 14:02:11",
+        "type": "sshd_fail",
+        "data": "Failed password for root from 192.168.1.105 port 49122 ssh2",
+        "severity": "error"
+      },
+      {
+        "time": "2024-10-27 14:02:13",
+        "type": "sshd_fail",
+        "data": "Failed password for root from 192.168.1.105 port 49122 ssh2",
+        "severity": "error"
+      },
+      {
+        "time": "2024-10-27 14:02:15",
+        "type": "sshd_success",
+        "data": "Accepted password for root from 192.168.1.105 port 49122 ssh2",
+        "severity": "success"
+      },
+      {
+        "time": "2024-10-27 14:02:16",
+        "type": "session_open",
+        "data": "pam_unix(sshd:session): session opened for user root by (uid=0)",
+        "severity": "info"
+      },
+      {
+        "time": "2024-10-27 14:02:18",
+        "type": "sshd_fail",
+        "data": "Failed password for invalid user admin from 10.0.0.44 port 51200 ssh2",
+        "severity": "error"
+      }
+    ],
+    "aggregates": [
+      { "ip": "192.168.1.105", "count": 4142 },
+      { "ip": "10.0.0.44", "count": 12 }
+    ],
+    "toolboxQueries": [
+      "index=main sourcetype=\"linux_secure\"",
+      "| stats count by src_ip | sort - count",
+      "index=main \"Accepted password\""
+    ]
+  },
+  {
+    "id": "LAB_02",
+    "title": "Wireshark Packet Sniffing",
+    "headline": "DNS beaconing — unusual query volume",
+    "environmentLabel": "Portfolio dataset · Network SIEM",
+    "statusLabel": "Curated exercise (sample DNS logs)",
+    "query": "index=network sourcetype=dns query=\"*.update-check.example\"\n| stats count by src_ip, query\n| where count > 100\n| sort - count",
+    "highlightIp": "203.0.113.88",
+    "threatSummary": [
+      { "label": "HIGHLIGHT_IP", "value": "203.0.113.88", "valClass": "text-primary-fixed" },
+      { "label": "SCENARIO", "value": "DNS tunneling pattern (sample)", "valClass": "text-on-surface" },
+      { "label": "CONTEXT", "value": "High-entropy subdomains · PTR rare", "valClass": "text-secondary-fixed" }
+    ],
+    "rows": [
+      {
+        "time": "2024-10-27 16:11:02",
+        "type": "dns_query",
+        "data": "QUERY a7f3b2.update-check.example from 203.0.113.88 — NOERROR",
+        "severity": "info"
+      },
+      {
+        "time": "2024-10-27 16:11:04",
+        "type": "dns_query",
+        "data": "QUERY 9c1d4e.update-check.example from 203.0.113.88 — NOERROR",
+        "severity": "info"
+      },
+      {
+        "time": "2024-10-27 16:11:06",
+        "type": "dns_alert",
+        "data": "Threshold exceeded: 203.0.113.88 sent 240 queries/min to *.update-check.example",
+        "severity": "error"
+      },
+      {
+        "time": "2024-10-27 16:11:09",
+        "type": "dns_query",
+        "data": "QUERY www.google.com from 10.0.0.12 — NOERROR",
+        "severity": "info"
+      }
+    ],
+    "aggregates": [
+      { "ip": "203.0.113.88", "count": 1840 },
+      { "ip": "10.0.0.12", "count": 42 }
+    ],
+    "toolboxQueries": [
+      "index=network sourcetype=dns",
+      "| stats count by src_ip, query | sort - count",
+      "index=network \"Threshold exceeded\""
+    ]
+  },
+  {
+    "id": "LAB_03",
+    "title": "Metasploit Environments",
+    "headline": "Web shell upload attempt — WAF + access logs",
+    "environmentLabel": "Portfolio dataset · AppSec",
+    "statusLabel": "Curated exercise (sample HTTP/WAF)",
+    "query": "index=web sourcetype=access_log status=200 uri=\"*/shell.php\"\n| stats count by src_ip, uri\n| sort - count",
+    "highlightIp": "198.51.100.17",
+    "threatSummary": [
+      { "label": "HIGHLIGHT_IP", "value": "198.51.100.17", "valClass": "text-primary-fixed" },
+      { "label": "SCENARIO", "value": "Exploit staging / upload probe", "valClass": "text-on-surface" },
+      { "label": "CONTEXT", "value": "Sandbox · no production systems", "valClass": "text-secondary-fixed" }
+    ],
+    "rows": [
+      {
+        "time": "2024-10-27 18:44:01",
+        "type": "waf_block",
+        "data": "BLOCK 198.51.100.17 POST /upload.php — rule: webshell_signature",
+        "severity": "error"
+      },
+      {
+        "time": "2024-10-27 18:44:03",
+        "type": "http_403",
+        "data": "198.51.100.17 GET /vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php — 403",
+        "severity": "error"
+      },
+      {
+        "time": "2024-10-27 18:44:05",
+        "type": "http_200",
+        "data": "198.51.100.17 POST /api/login — 200 (failed auth, same session)",
+        "severity": "info"
+      },
+      {
+        "time": "2024-10-27 18:44:07",
+        "type": "waf_allow",
+        "data": "ALLOW 10.0.0.5 GET /health — 200",
+        "severity": "success"
+      }
+    ],
+    "aggregates": [
+      { "ip": "198.51.100.17", "count": 287 },
+      { "ip": "10.0.0.5", "count": 8 }
+    ],
+    "toolboxQueries": [
+      "index=web sourcetype=access_log status>=400",
+      "| stats count by src_ip, uri | sort - count",
+      "index=web \"webshell_signature\""
+    ]
+  }
+]

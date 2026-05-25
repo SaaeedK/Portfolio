@@ -28,7 +28,7 @@ export const SideNav = () => {
             </div>
           </div>
           <NavLink
-            to="/labs"
+            to="/labs?lab=LAB_01"
             className="mt-4 w-full font-mono text-[10px] border border-secondary-fixed text-secondary-fixed py-2 hover:bg-secondary-fixed hover:text-background transition-all duration-300 shadow-[0_0_10px_rgba(76,227,70,0.2)] text-center"
           >
             VIEW_LAB_DEMO

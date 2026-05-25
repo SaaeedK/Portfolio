@@ -57,7 +57,7 @@ export const Home = () => {
                 transition={{ delay: index * 0.1 }}
               >
               <NavLink
-                to="/labs"
+                to={`/labs?lab=${lab.id}`}
                 className="bento-card rounded-lg p-6 flex flex-col gap-4 min-h-[220px] group relative focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-fixed"
               >
                 <div className="flex justify-between items-start">

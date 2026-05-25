@@ -30,3 +30,38 @@ export interface Project {
   /** When set, project card links to the repository. */
   repoUrl?: string;
 }
+
+export type LabLogSeverity = 'error' | 'success' | 'info';
+
+export interface LabLogRow {
+  time: string;
+  type: string;
+  data: string;
+  severity?: LabLogSeverity;
+}
+
+export interface LabAggregate {
+  ip: string;
+  count: number;
+}
+
+export interface LabThreatField {
+  label: string;
+  value: string;
+  valClass: string;
+}
+
+/** Curated SIEM-style exercise loaded from portfolio data (not a live Splunk instance). */
+export interface LabScenario {
+  id: string;
+  title: string;
+  headline: string;
+  environmentLabel: string;
+  statusLabel: string;
+  query: string;
+  highlightIp: string;
+  threatSummary: LabThreatField[];
+  rows: LabLogRow[];
+  aggregates: LabAggregate[];
+  toolboxQueries: string[];
+}
