@@ -25,9 +25,6 @@ export const Home = () => {
               Terminal: <span className="text-primary-fixed">{site.displayHandle}</span>
             </h1>
           </div>
-          <p className="font-mono text-xs md:text-sm text-on-surface-variant max-w-xl">
-            {site.tagline}
-          </p>
         </div>
 
         <div className="z-10 mt-8 md:mt-0 flex flex-col items-end gap-3 text-right">
@@ -35,11 +32,10 @@ export const Home = () => {
             <div className="w-2 h-2 rounded-full bg-secondary-fixed animate-pulse" aria-hidden />
             Portfolio · available
           </div>
-          <div className="font-mono text-xs text-on-surface-variant flex flex-col gap-1 items-end">
+          <div className="font-mono text-xs text-on-surface-variant items-end">
             <span>
-              Focus: <span className="text-primary-fixed">Security engineering</span>
+              Focus: <span className="text-primary-fixed">Cyber Security</span>
             </span>
-            <span className="text-[10px] opacity-70">Decorative metrics below are placeholders.</span>
           </div>
         </div>
 

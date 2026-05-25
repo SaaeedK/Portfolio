@@ -4,8 +4,6 @@
 export const site = {
   displayName: 'Saaeed Khan',
   displayHandle: 'SAAEED_K',
-  /** Shown in meta / OG tags */
-  tagline: 'Security engineer portfolio — terminal-inspired UI, static demo content.',
   /** Configure via VITE_GITHUB_URL, etc. */
   githubUrl: import.meta.env.VITE_GITHUB_URL as string | undefined,
   linkedinUrl: import.meta.env.VITE_LINKEDIN_URL as string | undefined,
