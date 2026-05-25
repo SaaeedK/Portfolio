@@ -32,9 +32,9 @@ export const Logs = () => {
       </p>
 
       <div className="flex flex-col md:flex-row gap-8 h-full">
-        <div className="w-full md:w-3/4 flex flex-col h-[650px]">
+        <div className="w-full md:w-3/4 flex flex-col min-h-[280px] h-[min(70vh,650px)] max-h-[85vh]">
           <div className="bento-card flex flex-col h-full rounded-none overflow-hidden group">
-            <div className="px-6 py-4 border-b border-primary-fixed/10 flex justify-between items-center bg-surface-container/50">
+            <div className="px-4 sm:px-6 py-4 border-b border-primary-fixed/10 flex justify-between items-center bg-surface-container/50">
               <div className="font-mono text-xs text-primary-fixed flex items-center gap-3">
                 <span className="opacity-50" aria-hidden>
                   &gt;
@@ -63,7 +63,7 @@ export const Logs = () => {
               </div>
             </div>
 
-            <div className="p-6 flex-1 overflow-y-auto no-scrollbar font-mono text-[13px] leading-relaxed flex flex-col gap-4 bg-[#050a0a]">
+            <div className="p-4 sm:p-6 flex-1 overflow-y-auto no-scrollbar font-mono text-[13px] leading-relaxed flex flex-col gap-4 bg-[#050a0a]">
               {entries.length === 0 ? (
                 <p className="text-on-surface-variant/60">Waiting for log stream…</p>
               ) : (

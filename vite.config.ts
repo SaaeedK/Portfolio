@@ -9,6 +9,23 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), tailwindcss()],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return;
+            if (id.includes('motion')) return 'vendor-motion';
+            if (
+              id.includes('react-dom') ||
+              id.includes('react-router') ||
+              /[/\\]react[/\\]/.test(id)
+            ) {
+              return 'vendor-react';
+            }
+          },
+        },
+      },
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, 'src'),

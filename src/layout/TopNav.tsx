@@ -3,14 +3,8 @@ import { NavLink } from 'react-router-dom';
 import { Terminal, ExternalLink, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { primaryNav } from '@/config/navigation';
 import { site, getResumeHref } from '@/data/site';
-
-const navItems = [
-  { name: 'DASHBOARD', path: '/' },
-  { name: 'LABS', path: '/labs' },
-  { name: 'LOGS', path: '/logs' },
-  { name: 'COMMS', path: '/comms' },
-] as const;
 
 export const TopNav = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -28,7 +22,7 @@ export const TopNav = () => {
         </NavLink>
 
         <div className="hidden md:flex gap-8 items-center font-mono text-[10px] sm:text-xs">
-          {navItems.map((item) => (
+          {primaryNav.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
@@ -80,7 +74,7 @@ export const TopNav = () => {
             className="md:hidden border-b border-primary-fixed/20 bg-background/95 backdrop-blur-xl overflow-hidden"
           >
             <div className="flex flex-col p-4 gap-4 font-mono text-xs">
-              {navItems.map((item) => (
+              {primaryNav.map((item) => (
                 <NavLink
                   key={item.path}
                   to={item.path}

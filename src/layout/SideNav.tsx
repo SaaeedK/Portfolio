@@ -1,12 +1,6 @@
 import { NavLink } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  FlaskConical,
-  ScrollText,
-  MessageSquare,
-  ShieldCheck,
-  Mail,
-} from 'lucide-react';
+import { ShieldCheck, Mail } from 'lucide-react';
+import { primaryNav } from '@/config/navigation';
 import { cn } from '@/lib/utils';
 import { site } from '@/data/site';
 
@@ -36,12 +30,7 @@ export const SideNav = () => {
         </div>
 
         <nav className="flex flex-col gap-1" aria-label="Sections">
-          {[
-            { name: 'DASHBOARD', icon: LayoutDashboard, path: '/' },
-            { name: 'LABS', icon: FlaskConical, path: '/labs' },
-            { name: 'LOGS', icon: ScrollText, path: '/logs' },
-            { name: 'COMMS', icon: MessageSquare, path: '/comms' },
-          ].map((item) => (
+          {primaryNav.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}

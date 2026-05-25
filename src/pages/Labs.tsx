@@ -35,13 +35,20 @@ export const Labs = () => {
   /** Per-lab SPL drafts so switching tabs never filters rows with another lab's query. */
   const [queryByLab, setQueryByLab] = useState<Record<string, string>>({});
   const [queryError, setQueryError] = useState('');
-  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copyTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
-      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      if (copyTimerRef.current != null) window.clearTimeout(copyTimerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!scenario) return;
+    const draft = queryByLab[scenario.id] ?? scenario.query;
+    const check = validateSecureQueryInput(draft);
+    setQueryError(check.ok ? '' : check.error);
+  }, [scenario, queryByLab]);
 
   const labMeta = useMemo(() => labs.find((l) => l.id === labId), [labId]);
 
@@ -85,7 +92,7 @@ export const Labs = () => {
   const onCopyQuery = async (query: string) => {
     const ok = await copyText(query);
     setCopyStatus(ok ? 'Query copied to clipboard.' : 'Could not copy — select and copy manually.');
-    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    if (copyTimerRef.current != null) window.clearTimeout(copyTimerRef.current);
     copyTimerRef.current = window.setTimeout(() => {
       setCopyStatus('');
       copyTimerRef.current = null;
@@ -260,6 +267,8 @@ export const Labs = () => {
               <div className="flex gap-3">
                 <span className="text-secondary-fixed opacity-70 pt-1 shrink-0">&gt;</span>
                 <textarea
+                  id="spl-query"
+                  name="spl-query"
                   value={queryText}
                   onChange={(e) => onQueryChange(e.target.value)}
                   spellCheck={false}
@@ -267,6 +276,7 @@ export const Labs = () => {
                   maxLength={MAX_QUERY_LEN}
                   aria-label="SPL query input"
                   aria-invalid={queryError ? true : undefined}
+                  aria-describedby={queryError ? 'spl-query-error' : undefined}
                   className={cn(
                     'outline-none w-full whitespace-pre-wrap bg-transparent resize-y min-h-20 text-on-surface',
                     'focus-visible:ring-1 focus-visible:ring-primary-fixed/50 rounded-sm',
@@ -275,7 +285,7 @@ export const Labs = () => {
                 />
               </div>
               {queryError ? (
-                <p className="mt-2 text-[11px] text-error-fixed font-bold" role="alert">
+                <p id="spl-query-error" className="mt-2 text-[11px] text-error-fixed font-bold" role="alert">
                   {queryError} Results are withheld until the query is safe.
                 </p>
               ) : (
@@ -289,20 +299,20 @@ export const Labs = () => {
           </div>
 
           <div className="bento-card rounded-none flex flex-col min-h-[400px]">
-            <div className="border-b border-primary-fixed/20 px-6 py-4 flex justify-between items-center bg-surface-variant/20">
-              <div className="flex items-center gap-4">
-                <Terminal size={18} className="text-primary-fixed" aria-hidden />
-                <div>
+            <div className="border-b border-primary-fixed/20 px-4 sm:px-6 py-4 flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start bg-surface-variant/20">
+              <div className="flex items-start gap-3 sm:gap-4 min-w-0">
+                <Terminal size={18} className="text-primary-fixed shrink-0 mt-0.5" aria-hidden />
+                <div className="min-w-0">
                   <h2 className="font-mono text-xs font-bold text-primary-fixed tracking-widest uppercase">
                     RAW_LOG_STREAM // RESULTS
                   </h2>
-                  <p className="mt-1 text-[10px] text-on-surface-variant/80 max-w-xl">
-                    Sample table: {scenario.rows.length} curated events (fixed 2024-10-27 UTC). EVENTS counts visible rows
-                    only — not SIEM index volume.
+                  <p className="mt-1 text-[10px] text-on-surface-variant/80 max-w-xl leading-relaxed">
+                    Sample table: {scenario.rows.length} curated events (fixed 2024-10-27 UTC). Row content switches with
+                    the active lab tab; EVENTS counts visible rows only — not SIEM index volume.
                   </p>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-1 font-mono text-[10px]">
+              <div className="flex flex-wrap items-center gap-x-4 sm:gap-x-6 gap-y-1 font-mono text-[10px] shrink-0">
                 <span className="text-on-surface-variant">
                   EVENTS:{' '}
                   <span className={cn('text-secondary-fixed', filteredView.queryBlocked && 'text-error-fixed')}>
@@ -334,7 +344,7 @@ export const Labs = () => {
               </div>
             </div>
 
-            <div className="p-6 overflow-x-auto no-scrollbar font-mono text-xs">
+            <div className="p-4 sm:p-6 overflow-x-auto no-scrollbar font-mono text-xs">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="text-on-surface/40 border-b border-outline-variant/30">
@@ -354,7 +364,7 @@ export const Labs = () => {
                     </tr>
                   ) : null}
                   {filteredView.filteredRows.map((log, i) => (
-                    <tr key={`${log.time}-${log.type}-${i}`} className="border-b border-outline-variant/10">
+                    <tr key={`${scenario.id}-${log.time}-${log.type}-${i}`} className="border-b border-outline-variant/10">
                       <td className="py-3 pr-4 text-on-surface/60 whitespace-nowrap tabular-nums">
                         {formatLabRowTime(log.time)}
                       </td>
@@ -429,7 +439,10 @@ export const Labs = () => {
                     <p className="text-[11px] text-error-fixed">Aggregations withheld — query failed security validation.</p>
                   ) : null}
                   {filteredView.metrics.aggregateBars.map((stat) => (
-                    <div key={stat.ip} className="flex items-center gap-6">
+                    <div
+                      key={stat.ip}
+                      className="flex flex-col min-[400px]:flex-row min-[400px]:items-center gap-2 min-[400px]:gap-6"
+                    >
                       <div
                         className="min-w-32 max-w-56 shrink-0 font-bold text-primary-fixed break-all text-[10px] sm:text-xs"
                         title={stat.ip}
@@ -476,7 +489,10 @@ export const Labs = () => {
 
               <div className="space-y-4 font-mono text-xs">
                 {scenario.threatSummary.map((item) => (
-                  <div key={item.label} className="flex justify-between items-end border-b border-outline-variant/10 pb-2 gap-4">
+                  <div
+                    key={item.label}
+                    className="flex flex-wrap justify-between items-end border-b border-outline-variant/10 pb-2 gap-x-4 gap-y-1"
+                  >
                     <span className="text-[10px] text-on-surface-variant uppercase shrink-0">{item.label}:</span>
                     <span className={cn('font-bold text-right', item.valClass)}>{item.value}</span>
                   </div>
