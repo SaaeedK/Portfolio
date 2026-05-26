@@ -14,8 +14,8 @@ pages_build_output_dir = "dist"
 # Contact API (server) — CONTACT_TO_EMAIL is a dashboard Secret, not stored in git
 CONTACT_REQUIRE_TURNSTILE = "true"
 CONTACT_ALLOWED_COUNTRIES = "US"
-# Comma-separated origins (no trailing slashes). Add your custom domain when attached, e.g. ,https://www.yourdomain.com
-ALLOWED_ORIGINS = "https://portfolio-6v0.pages.dev"
+# Comma-separated origins (no trailing slashes). saaeedk.is-a.dev — pending is-a.dev PR merge + Pages custom domain
+ALLOWED_ORIGINS = "https://portfolio-6v0.pages.dev,https://saaeedk.is-a.dev"
 # Optional verified Resend sender (uncomment and set if needed)
 # CONTACT_FROM = "Portfolio <noreply@yourdomain.com>"
 
@@ -28,7 +28,7 @@ VITE_LINKEDIN_URL = "https://linkedin.com/in/saaeed-khan"
 # Preview: looser geo (wrangler pages dev has no cf.country); local Vite origins for POST /api/contact
 [env.preview.vars]
 CONTACT_ALLOWED_COUNTRIES = ""
-ALLOWED_ORIGINS = "http://127.0.0.1:3000,http://localhost:3000,https://portfolio-6v0.pages.dev"
+ALLOWED_ORIGINS = "http://127.0.0.1:3000,http://localhost:3000,https://portfolio-6v0.pages.dev,https://saaeedk.is-a.dev"
 
 # KV rate limits for POST /api/contact (3/min, 6/hr per IP)
 [[kv_namespaces]]

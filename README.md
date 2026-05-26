@@ -42,3 +42,7 @@ Dev server: `http://127.0.0.1:3000`. Contact API locally: run `npm run pages:dev
 Hosted on **Cloudflare Pages**: build `npm run build`, output `dist`. Configure `[vars]` in `wrangler.toml` and set server secrets (`RESEND_API_KEY`, `TURNSTILE_SECRET`, `CONTACT_TO_EMAIL`) in the Pages dashboard. See `.env.example` for variable names.
 
 Do not put secrets in `VITE_*` — those are embedded in the client bundle.
+
+## Author
+
+**Saaeed Khan** — [GitHub](https://github.com/SaaeedK) · [LinkedIn](https://linkedin.com/in/saaeed-khan)
